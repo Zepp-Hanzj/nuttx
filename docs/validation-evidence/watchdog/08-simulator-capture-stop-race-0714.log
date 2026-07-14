@@ -1,0 +1,15 @@
+Configuration: sim:watchdog-notifier
+Temporary validation injection: watchdog_automonitor_capture_test()
+Scenario: capture callback invoked with NULL context after capture association
+was cleared by automonitor stop.
+
+[==========] tests: Running 2 test(s).
+[ RUN      ] drivertest_watchdog_notifier
+[       OK ] drivertest_watchdog_notifier
+[ RUN      ] drivertest_watchdog_notifier_race
+[       OK ] drivertest_watchdog_notifier_race
+[==========] tests: 2 test(s) run.
+[  PASSED  ] 2 test(s).
+
+The injected callback returned 0 without dereferencing a NULL upper-half.
+The injection hook is validation-only and is removed from the final source.

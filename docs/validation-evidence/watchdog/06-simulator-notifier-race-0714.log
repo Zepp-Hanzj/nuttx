@@ -1,0 +1,15 @@
+Configuration: sim:watchdog-notifier
+Configuration: CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE=y
+Command: cmocka_driver_watchdog
+
+[==========] tests: Running 2 test(s).
+[ RUN      ] drivertest_watchdog_notifier
+[       OK ] drivertest_watchdog_notifier
+[ RUN      ] drivertest_watchdog_notifier_race
+[       OK ] drivertest_watchdog_notifier_race
+[==========] tests: 2 test(s) run.
+[  PASSED  ] 2 test(s).
+
+The race test interleaves timeout delivery with notifier registration and
+unregistration from a concurrent pthread.  It completed without a fault,
+deadlock, or invalid callback payload.

@@ -153,6 +153,14 @@ static const struct file_operations g_wdogops =
 static ATOMIC_NOTIFIER_HEAD(g_watchdog_notifier_list);
 #endif
 
+#if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE)
+/* Fallback context for lower halves that invoke the capture callback with a
+ * NULL argument.  Lower halves that provide an argument remain instance
+ * safe; a NULL-argument lower half must have at most one active capture
+ * automonitor instance. */
+static FAR struct watchdog_upperhalf_s *g_watchdog_capture_upper;
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -162,15 +170,47 @@ static int watchdog_automonitor_capture(int irq, FAR void *context,
                                         FAR void *arg)
 {
   FAR struct watchdog_upperhalf_s *upper = arg;
+
+  /* Some lower-half drivers (including STM32 WWDG) invoke the capture
+   * handler with a NULL IRQ argument.  Use the upper-half associated when
+   * capture was installed in that case. */
+
+  if (upper == NULL)
+    {
+      upper = g_watchdog_capture_upper;
+    }
+
+  /* A stop operation can race with a pending interrupt.  Do not dereference
+   * a cleared association after automonitor has been stopped. */
+
+  if (upper == NULL)
+    {
+      return 0;
+    }
+
   FAR struct watchdog_lowerhalf_s *lower = upper->lower;
 
   if (upper->monitor)
     {
+      /* Reload the hardware watchdog before dispatching optional
+       * notifications.  The EWI-to-reset interval is short, and notifier
+       * callbacks must not delay the keepalive operation.
+       */
+
       lower->ops->keepalive(lower);
+
+#ifdef CONFIG_WATCHDOG_TIMEOUT_NOTIFIER
+      /* The capture callback is entered from the watchdog timeout
+       * interrupt.  Notifier callbacks must be safe in interrupt context.
+       */
+
+      watchdog_automonitor_timeout();
+#endif
     }
 
   return 0;
 }
+
 #elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
 static void
 watchdog_automonitor_oneshot(FAR struct oneshot_lowerhalf_s *oneshot,
@@ -267,6 +307,7 @@ watchdog_automonitor_start(FAR struct watchdog_upperhalf_s *upper)
   if (!upper->monitor)
     {
 #  if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE)
+      g_watchdog_capture_upper = upper;
       lower->ops->capture(lower, watchdog_automonitor_capture);
 #  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
       struct timespec ts =
@@ -310,6 +351,7 @@ static void watchdog_automonitor_stop(FAR struct watchdog_upperhalf_s *upper)
       upper->monitor = false;
       lower->ops->stop(lower);
 #  if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE)
+      g_watchdog_capture_upper = NULL;
       lower->ops->capture(lower, NULL);
 #  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
       ONESHOT_CANCEL(upper->oneshot, NULL);
@@ -762,7 +804,12 @@ void watchdog_notifier_chain_unregister(FAR struct notifier_block *nb)
 
 void watchdog_automonitor_timeout(void)
 {
-  atomic_notifier_call_chain(&g_watchdog_notifier_list, action, data);
+  /* The action identifies the automonitor keepalive mechanism selected at
+   * build time.  There is no source-specific payload for this event.
+   */
+
+  atomic_notifier_call_chain(&g_watchdog_notifier_list,
+                             WATCHDOG_NOTIFIER_ACTION, NULL);
 }
 #endif /* CONFIG_WATCHDOG_TIMEOUT_NOTIFIER */
 
