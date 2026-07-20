@@ -3053,6 +3053,18 @@ config ARCH_BOARD_STM32F411E_DISCO
 		This is a minimal configuration that supports low-level test of the
 		STMicro STM32F411E-Discovery Board.
 
+config ARCH_BOARD_WILDFIRE_STM32F429_CHALLENGER_V2
+	bool "Wildfire STM32F429 Challenger V2 board"
+	depends on ARCH_CHIP_STM32F429Z
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	select ARCH_HAVE_IRQBUTTONS
+	---help---
+		Wildfire STM32F429 Challenger V2 development board based on the
+		STMicro STM32F429IGT6 MCU. The board features 2MB Flash, 256KB SRAM,
+		8MHz HSE crystal, 32.768KHz LSE crystal, USB OTG FS/HS, Ethernet,
+		LCD interface, and SWD debug interface.
+
 config ARCH_BOARD_STM32F429I_DISCO
 	bool "STMicro STM32F429I-Discovery board"
 	depends on ARCH_CHIP_STM32F429Z
@@ -4014,6 +4026,7 @@ config ARCH_BOARD
 	default "stm32f334-disco"              if ARCH_BOARD_STM32F334_DISCO
 	default "stm32f4discovery"             if ARCH_BOARD_STM32F4_DISCOVERY
 	default "stm32f411e-disco"             if ARCH_BOARD_STM32F411E_DISCO
+	default "wildfire-stm32f429-challenger-v2" if ARCH_BOARD_WILDFIRE_STM32F429_CHALLENGER_V2
 	default "stm32f429i-disco"             if ARCH_BOARD_STM32F429I_DISCO
 	default "stm32f746g-disco"             if ARCH_BOARD_STM32F746G_DISCO
 	default "stm32f769i-disco"             if ARCH_BOARD_STM32F769I_DISCO
@@ -4848,6 +4861,9 @@ source "boards/arm/stm32f3/stm32f3discovery/Kconfig"
 endif
 if ARCH_BOARD_STM32F411E_DISCO
 source "boards/arm/stm32f4/stm32f411e-disco/Kconfig"
+endif
+if ARCH_BOARD_WILDFIRE_STM32F429_CHALLENGER_V2
+source "boards/arm/stm32f4/wildfire-stm32f429-challenger-v2/Kconfig"
 endif
 if ARCH_BOARD_STM32F429I_DISCO
 source "boards/arm/stm32f4/stm32f429i-disco/Kconfig"

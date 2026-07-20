@@ -1,0 +1,127 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+if ARCH_BOARD_WILDFIRE_STM32F429_CHALLENGER_V2
+
+config WILDFIRE_CHALLENGER_V2_FLASH
+	bool "MTD driver for external SPI FLASH"
+	default n
+	select MTD
+	select STM32_SPI4
+	select MTD_BYTE_WRITE
+	---help---
+		Configures an MTD device for use with the onboard SPI flash
+
+config WILDFIRE_CHALLENGER_V2_FLASH_MINOR
+	int "Minor number for the FLASH /dev/smart entry"
+	default 0
+	depends on WILDFIRE_CHALLENGER_V2_FLASH
+	---help---
+		Sets the minor number for the FLASH MTD /dev entry
+
+config WILDFIRE_CHALLENGER_V2_RAMMTD
+	bool "MTD driver for SMARTFS RAM disk"
+	default n
+	select MTD
+	select RAMMTD
+	---help---
+		Configures an MTD based RAM device for use with SMARTFS.
+
+config WILDFIRE_CHALLENGER_V2_RAMMTD_MINOR
+	int "Minor number for RAM /dev/smart entry"
+	default 1
+	depends on WILDFIRE_CHALLENGER_V2_RAMMTD
+	---help---
+		Sets the minor number for the RAM MTD /dev entry
+
+config WILDFIRE_CHALLENGER_V2_RAMMTD_SIZE
+	int "Size in KB of the RAM device to create"
+	default 32
+	depends on WILDFIRE_CHALLENGER_V2_RAMMTD
+	---help---
+		Sets the size of static RAM allocation for the SMART RAM device
+
+config WILDFIRE_CHALLENGER_V2_LCD
+	bool "LCD display support"
+	default n
+	select STM32_LTDC
+	select VIDEO_FB
+	---help---
+		Enable LCD display support via LTDC interface.
+
+config WILDFIRE_CHALLENGER_V2_LCD_WIDTH
+	int "LCD width in pixels"
+	default 480
+	depends on WILDFIRE_CHALLENGER_V2_LCD
+	---help---
+		LCD display width in pixels.
+
+config WILDFIRE_CHALLENGER_V2_LCD_HEIGHT
+	int "LCD height in pixels"
+	default 320
+	depends on WILDFIRE_CHALLENGER_V2_LCD
+	---help---
+		LCD display height in pixels.
+
+config WILDFIRE_CHALLENGER_V2_LVGL
+	bool "LVGL graphics library"
+	default n
+	depends on WILDFIRE_CHALLENGER_V2_LCD
+	select LVGL
+	select LV_USE_DEMO_WIDGETS
+	select LV_USE_DEMO_BENCHMARK
+	---help---
+		Enable LVGL graphics library with demo applications.
+
+config WILDFIRE_CHALLENGER_V2_SD_CARD
+	bool "SD card support via SDIO"
+	default n
+	select MMCSD
+	select MMCSD_SDIO
+	select STM32_SDIO
+	---help---
+		Enable SD card support via SDIO interface.
+
+config WILDFIRE_CHALLENGER_V2_SPI_FLASH
+	bool "SPI Flash support (W25Q/SST25)"
+	default n
+	select MTD
+	select STM32_SPI4
+	select MTD_W25Q
+	select MTD_BYTE_WRITE
+	---help---
+		Enable SPI Flash support via SPI4 interface.
+		Supports W25Q and SST25 series SPI Flash.
+
+config WILDFIRE_CHALLENGER_V2_SPI_FLASH_MINOR
+	int "Minor number for the SPI Flash /dev/smart entry"
+	default 0
+	depends on WILDFIRE_CHALLENGER_V2_SPI_FLASH
+	---help---
+		Sets the minor number for the SPI Flash MTD /dev entry
+
+config WILDFIRE_CHALLENGER_V2_SPI_FLASH_PART
+	bool "Enable partition support on SPI Flash"
+	default n
+	depends on WILDFIRE_CHALLENGER_V2_SPI_FLASH
+	---help---
+		Enables creation of partitions on the SPI Flash
+
+config WILDFIRE_CHALLENGER_V2_SPI_FLASH_PART_LIST
+	string "SPI Flash partition size list"
+	default "4,1020"
+	depends on WILDFIRE_CHALLENGER_V2_SPI_FLASH_PART
+	---help---
+		Comma separated list of partition sizes in KB.
+
+config WILDFIRE_CHALLENGER_V2_SPI_FLASH_PART_NAMES
+	string "SPI Flash partition name list"
+	default "config,rfs"
+	depends on WILDFIRE_CHALLENGER_V2_SPI_FLASH_PART
+	depends on MTD_PARTITION_NAMES
+	---help---
+		Comma separated list of partition names.
+
+endif # ARCH_BOARD_WILDFIRE_STM32F429_CHALLENGER_V2
