@@ -33,6 +33,12 @@
 #include "stm32.h"
 #include "stm32_gpio.h"
 
+/* SDRAM must be initialized before arm_addregion() adds it to the heap */
+
+#ifdef CONFIG_STM32_FMC
+extern void stm32_sdram_initialize(void);
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -58,6 +64,17 @@
 
 void stm32_boardinitialize(void)
 {
+#ifdef CONFIG_STM32_FMC
+  /* Wait for SDRAM power stabilization before FMC init */
+
+  {
+    volatile int delay;
+    for (delay = 0; delay < 500000; delay++);
+  }
+
+  stm32_sdram_initialize();
+#endif
+
 #ifdef CONFIG_ARCH_LEDS
   /* Configure on-board LEDs if LED support has been selected. */
 

@@ -326,10 +326,10 @@
  * Byte enable: PE0(NBL0), PE1(NBL1)
  */
 
-/* FMC SDRAM control pins */
+/* FMC SDRAM control pins (Bank 2: PH7=SDCKE1, PH6=SDNE1) */
 
-#define GPIO_FMC_SDCKE1  (GPIO_FMC_SDCKE1_1 | GPIO_SPEED_100MHz)
-#define GPIO_FMC_SDNE1   (GPIO_FMC_SDNE1_1 | GPIO_SPEED_100MHz)
+#define GPIO_FMC_SDCKE1  (GPIO_FMC_SDCKE1_2 | GPIO_SPEED_100MHz)
+#define GPIO_FMC_SDNE1   (GPIO_FMC_SDNE1_2 | GPIO_SPEED_100MHz)
 #define GPIO_FMC_SDNWE   (GPIO_FMC_SDNWE_1 | GPIO_SPEED_100MHz)
 
 /* FMC SDRAM data pins (D0-D15) */
@@ -351,7 +351,7 @@
 #define GPIO_FMC_D14     (GPIO_FMC_D14_0 | GPIO_SPEED_100MHz)
 #define GPIO_FMC_D15     (GPIO_FMC_D15_0 | GPIO_SPEED_100MHz)
 
-/* FMC SDRAM address pins (A0-A11) */
+/* FMC SDRAM address pins (A0-A12) for W9825G6KH (32MB, 13 row + 9 col) */
 
 #define GPIO_FMC_A0      (GPIO_FMC_A0_0 | GPIO_SPEED_100MHz)
 #define GPIO_FMC_A1      (GPIO_FMC_A1_0 | GPIO_SPEED_100MHz)
@@ -365,6 +365,7 @@
 #define GPIO_FMC_A9      (GPIO_FMC_A9_0 | GPIO_SPEED_100MHz)
 #define GPIO_FMC_A10     (GPIO_FMC_A10_0 | GPIO_SPEED_100MHz)
 #define GPIO_FMC_A11     (GPIO_FMC_A11_0 | GPIO_SPEED_100MHz)
+#define GPIO_FMC_A12     (GPIO_FMC_A12_0 | GPIO_SPEED_100MHz)
 
 /* FMC SDRAM byte enable pins */
 

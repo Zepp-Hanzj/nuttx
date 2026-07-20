@@ -25,7 +25,9 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/mount.h>
 #include <syslog.h>
+#include <errno.h>
 
 #include <nuttx/board.h>
 
@@ -54,6 +56,7 @@
  ****************************************************************************/
 
 int stm32_bringup(void);
+void stm32_sdram_initialize(void);
 
 #ifdef CONFIG_WILDFIRE_CHALLENGER_V2_LCD
 int stm32_lcdinitialize(void);
@@ -109,6 +112,48 @@ void board_late_initialize(void)
 int stm32_bringup(void)
 {
   int ret;
+
+#ifdef CONFIG_FS_PROCFS
+  /* Mount the procfs file system */
+
+  ret = mount(NULL, "/proc", "procfs", 0, NULL);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to mount /proc: %d\n", errno);
+    }
+#endif
+
+#ifdef CONFIG_STM32_FMC
+  /* Test SDRAM at offset 1MB (avoid heap sentinel at base) */
+
+  {
+    volatile uint32_t *sdram = (volatile uint32_t *)(0xD0100000);
+    size_t count = 4096;
+    size_t i;
+    int pass = 1;
+
+    for (i = 0; i < count; i++)
+      {
+        sdram[i] = (uint32_t)i ^ 0xDEADBEEF;
+      }
+
+    for (i = 0; i < count; i++)
+      {
+        if (sdram[i] != ((uint32_t)i ^ 0xDEADBEEF))
+          {
+            syslog(LOG_ERR, "SDRAM FAIL at offset %lu: read 0x%08lx\n",
+                   (unsigned long)i, (unsigned long)sdram[i]);
+            pass = 0;
+            break;
+          }
+      }
+
+    if (pass)
+      {
+        syslog(LOG_INFO, "SDRAM test PASSED (16KB at 0xD0100000)\n");
+      }
+  }
+#endif
 
 #ifdef CONFIG_USERLED
   /* Register the LED driver */
