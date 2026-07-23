@@ -102,6 +102,8 @@ static ssize_t nand_bread(FAR struct mtd_dev_s *dev, off_t startblock,
                           size_t nblocks, uint8_t *buffer);
 static ssize_t nand_bwrite(FAR struct mtd_dev_s *dev, off_t startblock,
                            size_t nblocks, const uint8_t *buffer);
+static ssize_t nand_read(FAR struct mtd_dev_s *dev, off_t offset,
+                         size_t nbytes, FAR uint8_t *buffer);
 static int     nand_ioctl(FAR struct mtd_dev_s *dev, int cmd,
                           unsigned long arg);
 static int     nand_isbad(FAR struct mtd_dev_s *dev, off_t block);
@@ -760,6 +762,103 @@ errout_with_lock:
 }
 
 /****************************************************************************
+ * Name: nand_read
+ *
+ * Description:
+ *   Byte-level read from the NAND device.  Needed by SMART driver which
+ *   reads sector headers at arbitrary byte offsets via MTD_READ.
+ *
+ ****************************************************************************/
+
+static ssize_t nand_read(FAR struct mtd_dev_s *dev, off_t offset,
+                         size_t nbytes, FAR uint8_t *buffer)
+{
+  FAR struct nand_dev_s *nand = (FAR struct nand_dev_s *)dev;
+  FAR struct nand_raw_s *raw;
+  FAR struct nand_model_s *model;
+  unsigned int pagesperblock;
+  uint16_t pagesize;
+  off_t maxblock;
+  off_t block;
+  unsigned int page;
+  off_t pageoff;
+  size_t remaining;
+  uint8_t pagebuf[2048];  /* Stack buffer: must be in internal SRAM, NOT SDRAM,
+                           * because NAND read takes over the shared D0-D7 bus
+                           * as GPIO, making SDRAM inaccessible during the read. */
+  int ret;
+
+  DEBUGASSERT(nand && nand->raw);
+
+  raw   = nand->raw;
+  model = &raw->model;
+
+  pagesperblock = nandmodel_pagesperblock(model);
+  pagesize      = nandmodel_getpagesize(model);
+  maxblock      = nandmodel_getdevblocks(model);
+
+  if (pagesize > sizeof(pagebuf))
+    {
+      return -EINVAL;
+    }
+
+  remaining = nbytes;
+  pageoff   = offset % pagesize;
+  offset    = offset / pagesize;       /* now a page number */
+  block     = offset / pagesperblock;
+  page      = offset % pagesperblock;
+
+  nxmutex_lock(&nand->lock);
+
+  while (remaining > 0)
+    {
+      size_t chunk;
+
+      if (block >= maxblock)
+        {
+          ret = -EIO;
+          goto errout;
+        }
+
+      /* Read the full page */
+
+      ret = nand_readpage(nand, block, page, pagebuf);
+      if (ret < 0)
+        {
+          goto errout;
+        }
+
+      /* Copy the requested bytes from the page */
+
+      chunk = pagesize - pageoff;
+      if (chunk > remaining)
+        {
+          chunk = remaining;
+        }
+
+      memcpy(buffer, pagebuf + pageoff, chunk);
+      buffer    += chunk;
+      remaining -= chunk;
+
+      /* Advance to next page */
+
+      pageoff = 0;
+      page++;
+      if (page >= pagesperblock)
+        {
+          page = 0;
+          block++;
+        }
+    }
+
+  ret = nbytes;
+
+errout:
+  nxmutex_unlock(&nand->lock);
+  return ret;
+}
+
+/****************************************************************************
  * Name: nand_ioctl
  ****************************************************************************/
 
@@ -932,9 +1031,12 @@ FAR struct mtd_dev_s *nand_raw_initialize(FAR struct nand_raw_s *raw)
   nand->mtd.erase   = nand_erase;
   nand->mtd.bread   = nand_bread;
   nand->mtd.bwrite  = nand_bwrite;
+  nand->mtd.read    = nand_read;
   nand->mtd.ioctl   = nand_ioctl;
+#ifdef CONFIG_FTL_BBM
   nand->mtd.isbad   = nand_isbad;
   nand->mtd.markbad = nand_markbad;
+#endif
   nand->raw         = raw;
 
   nxmutex_init(&nand->lock);

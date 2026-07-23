@@ -51,6 +51,10 @@
 #  include <nuttx/mtd/mtd.h>
 #endif
 
+#ifdef CONFIG_WILDFIRE_CHALLENGER_V2_NAND_FLASH
+#  include <nuttx/mtd/mtd.h>
+#endif
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -68,6 +72,10 @@ int stm32_sdcard_initialize(void);
 
 #ifdef CONFIG_WILDFIRE_CHALLENGER_V2_SPI_FLASH
 int stm32_spiflash_initialize(void);
+#endif
+
+#ifdef CONFIG_WILDFIRE_CHALLENGER_V2_NAND_FLASH
+int stm32_nandflash_initialize(void);
 #endif
 
 /* LED test - directly toggle GPIO for debugging */
@@ -124,35 +132,10 @@ int stm32_bringup(void)
 #endif
 
 #ifdef CONFIG_STM32_FMC
-  /* Test SDRAM at offset 1MB (avoid heap sentinel at base) */
-
-  {
-    volatile uint32_t *sdram = (volatile uint32_t *)(0xD0100000);
-    size_t count = 4096;
-    size_t i;
-    int pass = 1;
-
-    for (i = 0; i < count; i++)
-      {
-        sdram[i] = (uint32_t)i ^ 0xDEADBEEF;
-      }
-
-    for (i = 0; i < count; i++)
-      {
-        if (sdram[i] != ((uint32_t)i ^ 0xDEADBEEF))
-          {
-            syslog(LOG_ERR, "SDRAM FAIL at offset %lu: read 0x%08lx\n",
-                   (unsigned long)i, (unsigned long)sdram[i]);
-            pass = 0;
-            break;
-          }
-      }
-
-    if (pass)
-      {
-        syslog(LOG_INFO, "SDRAM test PASSED (16KB at 0xD0100000)\n");
-      }
-  }
+  /* SDRAM is initialized in stm32_boardinitialize() before the heap is set
+   * up.  Do NOT write test patterns here - 0xD0100000 is inside the heap2
+   * region (0xD0000000..0xD2000000) and would corrupt heap metadata.
+   */
 #endif
 
 #ifdef CONFIG_USERLED
@@ -202,6 +185,16 @@ int stm32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: stm32_spiflash_initialize failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_WILDFIRE_CHALLENGER_V2_NAND_FLASH
+  /* Initialize NAND Flash */
+
+  ret = stm32_nandflash_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_nandflash_initialize failed: %d\n", ret);
     }
 #endif
 

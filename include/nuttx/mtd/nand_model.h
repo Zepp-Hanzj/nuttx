@@ -52,7 +52,7 @@
 
 /* Number of NAND FLASH models inside the model list */
 
-#define NAND_NMODELS 60
+#define NAND_NMODELS 61
 
 /* Bit definitions for the NAND model options field */
 

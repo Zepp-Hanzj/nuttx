@@ -52,4 +52,8 @@ if(CONFIG_SPI)
   list(APPEND SRCS stm32_spi.c)
 endif()
 
+if(CONFIG_WILDFIRE_CHALLENGER_V2_NAND_FLASH)
+  list(APPEND SRCS stm32_nandflash.c)
+endif()
+
 target_sources(board PRIVATE ${SRCS})

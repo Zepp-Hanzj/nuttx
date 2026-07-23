@@ -124,4 +124,43 @@ config WILDFIRE_CHALLENGER_V2_SPI_FLASH_PART_NAMES
 	---help---
 		Comma separated list of partition names.
 
+config WILDFIRE_CHALLENGER_V2_NAND_FLASH
+	bool "NAND Flash support (W29N01GV)"
+	default n
+	select MTD
+	select MTD_NAND
+	select STM32_FMC
+	---help---
+		Enable NAND Flash support via FMC interface.
+		Supports Winbond W29N01GV (128MB) NAND Flash.
+
+config WILDFIRE_CHALLENGER_V2_NAND_MINOR
+	int "Minor number for the NAND Flash /dev/smart entry"
+	default 0
+	depends on WILDFIRE_CHALLENGER_V2_NAND_FLASH
+	---help---
+		Sets the minor number for the NAND Flash MTD /dev entry
+
+config WILDFIRE_CHALLENGER_V2_NAND_PART
+	bool "Enable partition support on NAND Flash"
+	default n
+	depends on WILDFIRE_CHALLENGER_V2_NAND_FLASH
+	---help---
+		Enables creation of partitions on the NAND Flash
+
+config WILDFIRE_CHALLENGER_V2_NAND_PART_LIST
+	string "NAND Flash partition size list"
+	default "64,121920"
+	depends on WILDFIRE_CHALLENGER_V2_NAND_PART
+	---help---
+		Comma separated list of partition sizes in KB.
+		Default: 64KB config + ~119MB data
+
+config WILDFIRE_CHALLENGER_V2_NAND_PART_NAMES
+	string "NAND Flash partition name list"
+	default "config,rfs"
+	depends on WILDFIRE_CHALLENGER_V2_NAND_PART
+	---help---
+		Comma separated list of partition names.
+
 endif # ARCH_BOARD_WILDFIRE_STM32F429_CHALLENGER_V2

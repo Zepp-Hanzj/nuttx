@@ -142,7 +142,15 @@ const struct nand_model_s g_nandmodels[NAND_NMODELS] =
   {0xc5, NANDMODEL_DATAWIDTH16 | OPTIONS,
                                    0, 0, 2048,   0, &g_nand_sparescheme2048},
   {0x38, NANDMODEL_DATAWIDTH8  | OPTIONS,
-                                   0, 0, 1024,   0, &g_nand_sparescheme4096}
+                                   0, 0, 1024,   0, &g_nand_sparescheme4096},
+
+  /* Winbond W29N01GV 1Gbit (128MB) NAND Flash
+   * Manufacturer: 0xEF (Winbond), Device: 0xF1
+   * Page: 2048+64, Block: 128KB, 1024 blocks
+   */
+
+  {0xf1, NANDMODEL_DATAWIDTH8  | OPTIONS,
+                                   0, 0,  128,   0, &g_nand_sparescheme2048}
 };
 
 /****************************************************************************

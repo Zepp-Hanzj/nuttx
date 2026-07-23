@@ -64,6 +64,10 @@ ifeq ($(CONFIG_WILDFIRE_CHALLENGER_V2_SPI_FLASH),y)
 CSRCS += stm32_spi.c stm32_spiflash.c
 endif
 
+ifeq ($(CONFIG_WILDFIRE_CHALLENGER_V2_NAND_FLASH),y)
+CSRCS += stm32_nandflash.c
+endif
+
 DEPPATH += --dep-path board
 VPATH += :board
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board$(DELIM)board
