@@ -282,6 +282,18 @@ int stm32_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: stm32_lcdinitialize failed: %d\n", ret);
     }
+  else
+    {
+      /* Register the framebuffer character device as /dev/fb0
+       * so the LVGL NuttX port can open it via info.fb_path.
+       */
+
+      ret = fb_register(0, 0);
+      if (ret < 0)
+        {
+          syslog(LOG_ERR, "ERROR: fb_register failed: %d\n", ret);
+        }
+    }
 #endif
 
 #ifdef CONFIG_WILDFIRE_CHALLENGER_V2_SD_CARD
