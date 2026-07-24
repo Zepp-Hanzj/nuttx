@@ -27,4 +27,4 @@
  */
 
 echo "rcS: starting lvgldemo..."
-lvgldemo
+lvgldemo &

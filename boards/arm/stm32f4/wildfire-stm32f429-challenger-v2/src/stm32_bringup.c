@@ -277,6 +277,14 @@ int stm32_bringup(void)
 #ifdef CONFIG_WILDFIRE_CHALLENGER_V2_LCD
   /* Initialize LCD */
 
+  /* Turn on the LCD backlight (PD7, active high) - the LTDC driver's
+   * stm32_backlight() is a no-op stub on stm32f4, so drive the GPIO
+   * directly here.
+   */
+
+  stm32_configgpio(GPIO_LCD_BL);
+  stm32_gpiowrite(GPIO_LCD_BL, true);
+
   ret = stm32_lcdinitialize();
   if (ret < 0)
     {
