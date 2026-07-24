@@ -19,6 +19,7 @@
 #include <string.h>
 #include <errno.h>
 #include <debug.h>
+#include <syslog.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/mtd/nand.h>
@@ -443,20 +444,21 @@ int stm32_nandflash_initialize(void)
     FAR struct mtd_dev_s *p;
     struct mtd_geometry_s geo;
     off_t total_blocks;
-    off_t part0_blocks = 512;  /* 512 pages = 1MB (8 erase blocks) */
+    off_t half_blocks;
     int sret;
 
     priv->mtd->ioctl(priv->mtd, MTDIOC_GEOMETRY,
                      (unsigned long)((uintptr_t)&geo));
     total_blocks = geo.neraseblocks * (geo.erasesize / geo.blocksize);
+    half_blocks = total_blocks / 2;
 
-    /* Partition 0: config area */
+    /* Partition 0: first half -> /dev/smart0 */
 
-    p = mtd_partition(priv->mtd, 0, part0_blocks);
+    p = mtd_partition(priv->mtd, 0, half_blocks);
     if (p)
       {
-        syslog(LOG_INFO, "NAND: Partition 0 created (%lu pages)\n",
-               (unsigned long)part0_blocks);
+        syslog(LOG_INFO, "NAND: Partition 0 created (%lu blocks)\n",
+               (unsigned long)half_blocks);
         sret = smart_initialize(0, p, NULL);
         if (sret < 0)
           {
@@ -472,17 +474,13 @@ int stm32_nandflash_initialize(void)
         syslog(LOG_ERR, "NAND: Failed to create partition 0\n");
       }
 
-    /* Partition 1: remaining data area.
-     * FMC hardware is fast enough (~5s for the full 127MB scan) and
-     * arbitrates the bus with SDRAM, so both partitions can be brought
-     * up synchronously here.
-     */
+    /* Partition 1: second half -> /dev/smart1 */
 
-    p = mtd_partition(priv->mtd, part0_blocks, total_blocks - part0_blocks);
+    p = mtd_partition(priv->mtd, half_blocks, total_blocks - half_blocks);
     if (p)
       {
-        syslog(LOG_INFO, "NAND: Partition 1 created (%lu pages)\n",
-               (unsigned long)(total_blocks - part0_blocks));
+        syslog(LOG_INFO, "NAND: Partition 1 created (%lu blocks)\n",
+               (unsigned long)(total_blocks - half_blocks));
         sret = smart_initialize(1, p, NULL);
         if (sret < 0)
           {
