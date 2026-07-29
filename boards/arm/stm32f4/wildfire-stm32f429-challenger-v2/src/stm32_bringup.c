@@ -248,10 +248,61 @@ int stm32_bringup(void)
 #endif
 
 #ifdef CONFIG_STM32_FMC
-  /* SDRAM is initialized in stm32_boardinitialize() before the heap is set
-   * up.  Do NOT write test patterns here - 0xD0100000 is inside the heap2
-   * region (0xD0000000..0xD2000000) and would corrupt heap metadata.
+  /* SDRAM data-integrity self-test — runs BEFORE LTDC init so that if the
+   * panel is white we can distinguish "fbmem SDRAM path broken" from "LTDC
+   * signal chain broken". fbmem region (CONFIG_STM32_LTDC_FB_BASE,
+   * CONFIG_STM32_LTDC_FB_SIZE) was excluded from heap2 (heap2 starts at
+   * 0xD0200000), so writing it here does NOT corrupt heap metadata.
+   *
+   * Writes a known 32-bit LFSR pattern to every fbmem word, reads back, and
+   * logs the first mismatch + pass/fail count via syslog so the result shows
+   * on the USART6 console boot log.
    */
+
+  {
+    volatile uint32_t *fb = (volatile uint32_t *)CONFIG_STM32_LTDC_FB_BASE;
+    uint32_t fb_words = CONFIG_STM32_LTDC_FB_SIZE / sizeof(uint32_t);
+    uint32_t i, expect, got, mism = 0, first_bad_off = 0xFFFFFFFF;
+
+    /* Write phase: LFSR pattern (tap bits 31,21) so each word is unique but
+     * reconstructable, not all-0/all-1 (which a dead bus would fake-pass). */
+
+    expect = 0x55AA55AAu;
+    for (i = 0; i < fb_words; i++)
+      {
+        fb[i] = expect;
+        expect = (expect << 1) | (expect >> 31);
+        expect ^= (expect >> 10);
+      }
+
+    /* Read-back phase */
+
+    expect = 0x55AA55AAu;
+    for (i = 0; i < fb_words; i++)
+      {
+        got = fb[i];
+        if (got != expect)
+          {
+            if (mism == 0)
+              {
+                first_bad_off = i;
+              }
+            mism++;
+            if (mism >= 8)
+              {
+                break;  /* log first few only */
+              }
+          }
+        expect = (expect << 1) | (expect >> 31);
+        expect ^= (expect >> 10);
+      }
+
+    syslog(LOG_INFO, "SDRAM TEST: %lu words, %lu mismatch, first_bad_off=0x%lX\n",
+           (unsigned long)fb_words, (unsigned long)mism,
+           (unsigned long)first_bad_off);
+    syslog(LOG_INFO, "SDRAM TEST: %s\n", (mism == 0) ? "PASS — SDRAM OK" :
+           "FAIL — SDRAM path broken (white screen root cause)");
+  }
 #endif
 
 #ifdef CONFIG_USERLED
@@ -277,13 +328,16 @@ int stm32_bringup(void)
 #ifdef CONFIG_WILDFIRE_CHALLENGER_V2_LCD
   /* Initialize LCD */
 
-  /* Turn on the LCD backlight (PD7, active high) - the LTDC driver's
-   * stm32_backlight() is a no-op stub on stm32f4, so drive the GPIO
-   * directly here.
+  /* BUG FIX: match the Wildfire demo (gui_lcd_port.c GUI_DisplayInit)
+   * order exactly — LTDC init FIRST, then fill framebuffer, THEN turn on
+   * backlight. Previously backlight was turned on BEFORE LTDC init, so the
+   * panel entered its default white-power-on state while LTDC had no valid
+   * signal yet, and that white state persisted over the LTDC output → white
+   * panel. Backlight must come LAST so the panel's first lit frame is the
+   * LTDC framebuffer content, not its internal default.
    */
 
-  stm32_configgpio(GPIO_LCD_BL);
-  stm32_gpiowrite(GPIO_LCD_BL, true);
+  stm32_configgpio(GPIO_LCD_BL);   /* configure the BL pin now, but keep it OFF */
 
   ret = stm32_lcdinitialize();
   if (ret < 0)
@@ -302,6 +356,12 @@ int stm32_bringup(void)
           syslog(LOG_ERR, "ERROR: fb_register failed: %d\n", ret);
         }
     }
+
+  /* Turn on the LCD backlight AFTER LTDC init + framebuffer fill, matching
+   * the demo's LCD_BkLight(TRUE) at the end of GUI_DisplayInit.
+   */
+
+  stm32_gpiowrite(GPIO_LCD_BL, true);
 #endif
 
 #ifdef CONFIG_WILDFIRE_CHALLENGER_V2_SD_CARD

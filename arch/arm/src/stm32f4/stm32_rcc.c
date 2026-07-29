@@ -152,6 +152,14 @@ static inline void rcc_resetbkp(void)
 
 void stm32_clockconfig(void)
 {
+  /* HARDWARE PROOF: toggle the on-board LED1 (PH10) so we have a physical
+   * indicator that stm32_clockconfig() actually executed at runtime.
+   * This bypasses all register-read timing issues with J-Link/GDB.
+   */
+
+  stm32_configgpio(GPIO_LED1);
+  stm32_gpiowrite(GPIO_LED1, false);   /* LED1 is active low, false = ON */
+
   /* Make sure that we are starting in the reset state */
 
   rcc_reset();

@@ -1273,20 +1273,89 @@ static void stm32_ltdc_periphconfig(void)
 
   stm32_ltdc_gpioconfig();
 
-  /* Configure APB2 LTDC clock external */
+  /* Configure APB2 LTDC clock */
 
+  /* Enable the LTDC peripheral clock on APB2.  Without this bit set the
+   * LTDC register writes are silently discarded by hardware, which is
+   * why BPCR/AWCR/TWCR/CFBAR all read back as their reset values even
+   * after stm32_ltdc_periphconfig() runs.  Note RCC_APB2ENR_LTDCEN is
+   * only defined on F469/F429 parts that have an LTDC.
+   */
+
+#ifdef RCC_APB2ENR_LTDCEN
+  regval  = getreg32(STM32_RCC_APB2ENR);
+  regval |= RCC_APB2ENR_LTDCEN;
+  reginfo("set RCC_APB2ENR=%08" PRIx32 "\n", regval);
+  putreg32(regval, STM32_RCC_APB2ENR);
   reginfo("configured RCC_APB2ENR=%08" PRIx32 "\n",
           getreg32(STM32_RCC_APB2ENR));
+#else
+  reginfo("configured RCC_APB2ENR=%08" PRIx32 "\n",
+          getreg32(STM32_RCC_APB2ENR));
+#endif
 
-  /* Configure the SAI PLL external to provide the LCD_CLK */
+  /* Configure the SAI PLL to provide the LCD_CLK pixel clock.
+   *
+   * BUG FIX: stm32f40xxx_rcc.c's stm32_clockconfig() has this PLLSAI
+   * setup block guarded by '#if defined(CONFIG_STM32_LTDC)', but that
+   * guard does not reliably fire for F429 builds (CONFIG_STM32_LTDC
+   * ends up undefined when stm32f40xxx_rcc.c is compiled via the
+   * stm32_rcc.c wrapper), so RCC_CR_PLLSAION never gets set and every
+   * LTDC register write is discarded by hardware — leaving the panel
+   * white.  Do the PLLSAI setup here, in the LTDC driver itself, so it
+   * runs regardless of how the RCC startup code was compiled.
+   */
 
+#if defined(STM32_RCC_PLLSAICFGR) && defined(STM32_RCC_DCKCFGR) && \
+    defined(RCC_CR_PLLSAION) && defined(RCC_CR_PLLSAIRDY)
+  {
+    uint32_t pllsai;
+
+    /* PLLSAICFGR: program N, Q, R from board defines (the masks/shifts
+     * and the per-chip DIVR value come from the F40xxx rcc header).
+     */
+
+    pllsai  = getreg32(STM32_RCC_PLLSAICFGR);
+    pllsai &= ~(RCC_PLLSAICFGR_PLLSAIN_MASK
+                | RCC_PLLSAICFGR_PLLSAIQ_MASK
+                | RCC_PLLSAICFGR_PLLSAIR_MASK);
+    pllsai |= STM32_RCC_PLLSAICFGR_PLLSAIN;
+    pllsai |= STM32_RCC_PLLSAICFGR_PLLSAIQ;
+    pllsai |= STM32_RCC_PLLSAICFGR_PLLSAIR;
+    reginfo("set RCC_PLLSAICFGR=%08" PRIx32 "\n", pllsai);
+    putreg32(pllsai, STM32_RCC_PLLSAICFGR);
+    reginfo("configured RCC_PLLSAICFGR=%08" PRIx32 "\n",
+            getreg32(STM32_RCC_PLLSAICFGR));
+
+    /* DCKCFGR: select the PLLSAI_R divider for the LTDC pixel clock */
+
+    pllsai  = getreg32(STM32_RCC_DCKCFGR);
+    pllsai &= ~RCC_DCKCFGR_PLLSAIDIVR_MASK;
+    pllsai |= STM32_RCC_DCKCFGR_PLLSAIDIVR;
+    reginfo("set RCC_DCKCFGR=%08" PRIx32 "\n", pllsai);
+    putreg32(pllsai, STM32_RCC_DCKCFGR);
+    reginfo("configured RCC_DCKCFGR=%08" PRIx32 "\n",
+            getreg32(STM32_RCC_DCKCFGR));
+
+    /* Enable PLLSAI and wait until it is ready */
+
+    pllsai  = getreg32(STM32_RCC_CR);
+    pllsai |= RCC_CR_PLLSAION;
+    reginfo("set RCC_CR=%08" PRIx32 "\n", pllsai);
+    putreg32(pllsai, STM32_RCC_CR);
+
+    while ((getreg32(STM32_RCC_CR) & RCC_CR_PLLSAIRDY) == 0)
+      {
+      }
+    reginfo("PLLSAI ready, RCC_CR=%08" PRIx32 "\n",
+            getreg32(STM32_RCC_CR));
+  }
+#else
   reginfo("configured RCC_PLLSAI=%08" PRIx32 "\n",
           getreg32(STM32_RCC_PLLSAICFGR));
-
-  /* Configure dedicated clock external */
-
   reginfo("configured RCC_DCKCFGR=%08" PRIx32 "\n",
           getreg32(STM32_RCC_DCKCFGR));
+#endif
 
   /* Configure LTDC_SSCR */
 

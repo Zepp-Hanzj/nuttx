@@ -68,6 +68,26 @@ extern void nand_fmc_init(void);
 
 void stm32_boardinitialize(void)
 {
+#ifdef CONFIG_ARCH_LEDS
+  /* Configure LED GPIOs as outputs HIGH (active-low LEDs OFF) as early as
+   * possible.  After reset PH10/11/12 are floating inputs and the LEDs
+   * are wired active-low (anode to VCC), so they light during the entire
+   * boot window until board_autoled_initialize() runs below.  Configuring
+   * them HIGH here kills them from the very first instruction of board
+   * init.  stm32_configgpio is safe to call this early (stm32_gpioinit()
+   * already ran in __start).
+   */
+
+  board_autoled_initialize();
+  {
+    int i;
+    for (i = 0; i < BOARD_NLEDS; i++)
+      {
+        board_autoled_off(i);
+      }
+  }
+#endif
+
 #ifdef CONFIG_WILDFIRE_CHALLENGER_V2_NAND_FLASH
   /* Configure FMC NAND Bank3 BEFORE SDRAM.  On this chip the FMC
    * controller won't honor NAND Bank3 (0x90000000) accesses if the
@@ -92,9 +112,9 @@ void stm32_boardinitialize(void)
 #endif
 
 #ifdef CONFIG_ARCH_LEDS
-  /* Configure on-board LEDs if LED support has been selected. */
-
-  board_autoled_initialize();
+  /* board_autoled_initialize() already called above at the top of this
+   * function to turn LEDs off ASAP; no need to call it again here.
+   */
 #endif
 
 #ifdef CONFIG_ARCH_BUTTONS
