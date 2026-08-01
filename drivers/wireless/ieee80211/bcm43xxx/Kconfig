@@ -124,6 +124,16 @@ config IEEE80211_BROADCOM_FULLMAC_SDIO
 		This selection enables support for broadcom
 		FullMAC-compliant devices using SDIO bus.
 
+config IEEE80211_BROADCOM_SDIO_INBAND_IRQ
+	bool "Use SDIO in-band function interrupts"
+	depends on IEEE80211_BROADCOM_FULLMAC_SDIO
+	default n
+	---help---
+		Use the SDIO DAT1 function interrupt instead of redirecting device
+		interrupts to a separate out-of-band GPIO.  Enable this when the
+		board registers the BCMF interrupt callback with the SDIO host
+		controller rather than an external GPIO interrupt.
+
 config IEEE80211_BROADCOM_FULLMAC_GSPI
 	bool "Broadcom FullMAC driver on gSPI bus"
 	select IEEE80211_BROADCOM_FULLMAC

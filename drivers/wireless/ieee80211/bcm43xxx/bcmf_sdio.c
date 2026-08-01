@@ -483,7 +483,7 @@ int bcmf_bus_setup_interrupts(FAR struct bcmf_sdio_dev_s *sbus)
       return ret;
     }
 
-#ifndef CONFIG_BCMFMAC_NO_OOB
+#ifndef CONFIG_IEEE80211_BROADCOM_SDIO_INBAND_IRQ
   /* Redirect, configure and enable io for out-of-band interrupt signal */
 
   ret = bcmf_write_reg(sbus, 0, SDIO_CCCR_BRCM_SEPINT,
