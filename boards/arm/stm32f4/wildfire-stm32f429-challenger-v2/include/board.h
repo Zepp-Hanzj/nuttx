@@ -187,6 +187,29 @@
 #define SDIO_MMCXFR_CLKDIV    (1 << SDIO_CLKCR_CLKDIV_SHIFT)
 #define SDIO_SDXFR_CLKDIV     (1 << SDIO_CLKCR_CLKDIV_SHIFT)
 
+/* STM32F4 SDIO DMA2 channel 4 can use stream 3 or stream 6.  Use the
+ * conventional stream 3 mapping; no enabled board peripheral conflicts with
+ * it in the Wi-Fi configuration.
+ */
+
+#define DMAMAP_SDIO           DMAMAP_SDIO_1
+
+/* AP6181 Wi-Fi module ******************************************************/
+
+/* The AP6181 (BCM43362) shares PC8-PC12/PD2 with the TF-card socket.
+ * PB13 drives WL_REG_ON (active high), and PA0 receives WL_HOST_WAKE
+ * (active high).  AP6181 carries its own 26MHz crystal; LPO is not fitted.
+ */
+
+#define GPIO_AP6181_REG_ON \
+  (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | GPIO_OUTPUT_CLEAR | \
+   GPIO_PORTB | GPIO_PIN13)
+#define GPIO_AP6181_HOST_WAKE \
+  (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | GPIO_PORTA | GPIO_PIN0)
+
+#define BOARD_AP6181_SDIO_SLOT  0
+#define BOARD_AP6181_MINOR      0
+
 /* SPI Flash (SPI4) configuration *******************************************/
 
 /* SPI4 interface for SPI Flash (W25Q/SST25)

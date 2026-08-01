@@ -88,6 +88,10 @@ int stm32_nandflash_initialize(void);
 int stm32_touchscreen_initialize(void);
 #endif
 
+#ifdef CONFIG_WILDFIRE_CHALLENGER_V2_AP6181
+int stm32_ap6181_initialize(void);
+#endif
+
 /* LED test - directly toggle GPIO for debugging */
 #include "stm32_gpio.h"
 #include <arch/board/board.h>
@@ -408,6 +412,18 @@ int stm32_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: stm32_touchscreen_initialize failed: %d\n",
              ret);
+    }
+#endif
+
+#ifdef CONFIG_WILDFIRE_CHALLENGER_V2_AP6181
+  /* Register the AP6181 as wlan0.  The radio remains down until wlan0 is
+   * brought up by WAPI, at which point the BCM43362 firmware is uploaded.
+   */
+
+  ret = stm32_ap6181_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_ap6181_initialize failed: %d\n", ret);
     }
 #endif
 

@@ -56,4 +56,8 @@ if(CONFIG_WILDFIRE_CHALLENGER_V2_NAND_FLASH)
   list(APPEND SRCS stm32_nandflash.c)
 endif()
 
+if(CONFIG_WILDFIRE_CHALLENGER_V2_AP6181)
+  list(APPEND SRCS stm32_ap6181.c stm32_ap6181_firmware.c)
+endif()
+
 target_sources(board PRIVATE ${SRCS})

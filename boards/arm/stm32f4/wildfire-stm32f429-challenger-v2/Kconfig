@@ -84,6 +84,21 @@ config WILDFIRE_CHALLENGER_V2_SD_CARD
 	---help---
 		Enable SD card support via SDIO interface.
 
+config WILDFIRE_CHALLENGER_V2_AP6181
+	bool "AP6181 (BCM43362) Wi-Fi support"
+	default n
+	depends on IEEE80211_BROADCOM_FULLMAC_SDIO
+	depends on !WILDFIRE_CHALLENGER_V2_SD_CARD
+	select IEEE80211_BROADCOM_BCM43362
+	---help---
+		Enable the on-board AMPAK AP6181 Wi-Fi module.  The module uses a
+		Broadcom BCM43362 FullMAC device connected to SDIO, with WL_REG_ON
+		on PB13 and the out-of-band host-wake interrupt on PA0.
+
+		The AP6181 and TF-card socket are wired directly to the same SDIO
+		signals on this board, without a bus multiplexer.  They therefore
+		cannot be enabled at the same time.
+
 config WILDFIRE_CHALLENGER_V2_SPI_FLASH
 	bool "SPI Flash support (W25Q/SST25)"
 	default n

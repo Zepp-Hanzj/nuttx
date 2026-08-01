@@ -27,4 +27,8 @@
  */
 
 echo "rcS: starting lvgldemo..."
+#ifdef CONFIG_EXAMPLES_LVGLDEMO_WIFI
+lvgldemo wifi &
+#else
 lvgldemo &
+#endif
