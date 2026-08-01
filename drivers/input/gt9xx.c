@@ -37,6 +37,7 @@
 #include <poll.h>
 #include <assert.h>
 #include <errno.h>
+#include <syslog.h>
 #include <nuttx/debug.h>
 
 #include <nuttx/arch.h>
@@ -323,9 +324,13 @@ static int gt9xx_probe_device(FAR struct gt9xx_dev_s *dev)
 
   /* For GT917S: Product ID will be 39 31 37 53, i.e. "917S" */
 
-#ifdef CONFIG_DEBUG_INPUT_INFO
-  iinfodumpbuffer("gt9xx_probe_device", id, sizeof(id));
-#endif /* CONFIG_DEBUG_INPUT_INFO */
+#ifdef CONFIG_INPUT_GT9XX_REPORT_LOG
+  syslog(LOG_INFO,
+         "GT9xx Product ID: %c%c%c%c (0x%02x%02x%02x%02x)\n",
+         id[0], id[1], id[2], id[3],
+         (unsigned int)id[0], (unsigned int)id[1],
+         (unsigned int)id[2], (unsigned int)id[3]);
+#endif
 
   return OK;
 }
@@ -438,7 +443,11 @@ static int gt9xx_read_touch_data(FAR struct gt9xx_dev_s *dev,
       sample->point[0].x = x;
       sample->point[0].y = y;
       sample->point[0].flags = flags;
-      iinfo("touch down x=%d, y=%d\n", x, y);
+#ifdef CONFIG_INPUT_GT9XX_REPORT_LOG
+      syslog(LOG_INFO, "GT9xx report: DOWN x=%u y=%u points=%u\n",
+             (unsigned int)x, (unsigned int)y,
+             (unsigned int)touched_points);
+#endif
     }
 
   /* Set the Touch Panel Status to 0 */
@@ -532,7 +541,10 @@ static ssize_t gt9xx_read(FAR struct file *filep, FAR char *buffer,
       sample.point[0].flags = priv->flags;
       memcpy(buffer, &sample, sizeof(sample));
       ret = OK;
-      iinfo("touch up x=%d, y=%d\n", priv->x, priv->y);
+#ifdef CONFIG_INPUT_GT9XX_REPORT_LOG
+      syslog(LOG_INFO, "GT9xx report: UP x=%u y=%u\n",
+             (unsigned int)priv->x, (unsigned int)priv->y);
+#endif
     }
   else
     {
@@ -631,6 +643,10 @@ static int gt9xx_open(FAR struct file *filep)
       /* If first user, power on the Touch Panel */
 
       DEBUGASSERT(priv->board->set_power != NULL);
+#ifdef CONFIG_INPUT_GT9XX_REPORT_LOG
+      syslog(LOG_INFO,
+             "GT9xx open: starting reset/address-select sequence\n");
+#endif
       ret = priv->board->set_power(priv->board, true);
       if (ret < 0)
         {
@@ -643,6 +659,10 @@ static int gt9xx_open(FAR struct file *filep)
 
       /* Check that Touch Panel exists on I2C */
 
+#ifdef CONFIG_INPUT_GT9XX_REPORT_LOG
+      syslog(LOG_INFO, "GT9xx open: probing address 0x%02x\n",
+             priv->addr);
+#endif
       ret = gt9xx_probe_device(priv);
       if (ret < 0)
         {
@@ -656,6 +676,9 @@ static int gt9xx_open(FAR struct file *filep)
 
       DEBUGASSERT(priv->board->irq_enable);
       priv->board->irq_enable(priv->board, true);
+#ifdef CONFIG_INPUT_GT9XX_REPORT_LOG
+      syslog(LOG_INFO, "GT9xx open: probe passed, interrupt enabled\n");
+#endif
     }
 
   /* Set the Reference Count */

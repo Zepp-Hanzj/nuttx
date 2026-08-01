@@ -140,6 +140,9 @@ static void stm32_gt9xx_irq_enable(const struct gt9xx_board_s *state,
 {
   irqstate_t flags;
 
+  syslog(LOG_INFO, "GT9xx: PD13 interrupt %s\n",
+         enable ? "enabled (rising edge)" : "disabled");
+
   flags = enter_critical_section();
 
   if (enable)
@@ -184,6 +187,9 @@ static int stm32_gt9xx_set_power(const struct gt9xx_board_s *state,
 {
   if (on)
     {
+      syslog(LOG_INFO, "GT9xx: reset start, selecting I2C address 0x%02X\n",
+             BOARD_GT9XX_I2C_ADDR);
+
       /* Boot sequence (mirrors BSP I2C_ResetChip):
        *   1. INT becomes output low (selects the 0x5D I2C address)
        *   2. RST goes low
@@ -213,12 +219,16 @@ static int stm32_gt9xx_set_power(const struct gt9xx_board_s *state,
       /* Release INT back to input (EXTI will be armed by irq_enable) */
 
       stm32_configgpio(GPIO_GT9XX_INT);
+      syslog(LOG_INFO, "GT9xx: reset complete, INT=%d RST=%d\n",
+             stm32_gpioread(GPIO_GT9XX_INT),
+             stm32_gpioread(GPIO_GT9XX_RST));
     }
   else
     {
       /* Hold reset low to power the GT9xx down */
 
       stm32_gpiowrite(GPIO_GT9XX_RST, false);
+      syslog(LOG_INFO, "GT9xx: held in reset\n");
     }
 
   return OK;

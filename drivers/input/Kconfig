@@ -581,6 +581,15 @@ config INPUT_GT9XX_I2C_FREQUENCY
 	---help---
 		I2C frequency in Hz
 
+config INPUT_GT9XX_REPORT_LOG
+	bool "Initialization and touch report logging"
+	default n
+	---help---
+		Print the GT9XX initialization stages, Product ID, and touch down/up
+		coordinates to syslog.  Unlike DEBUG_INPUT_INFO, this does not log
+		every register access and is therefore suitable for diagnosing a
+		touchscreen while a GUI polls the input device continuously.
+
 endif # INPUT_GT9XX
 
 config INPUT_BUTTONS
