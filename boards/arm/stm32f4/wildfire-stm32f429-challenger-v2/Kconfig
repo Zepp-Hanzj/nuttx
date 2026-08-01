@@ -163,4 +163,15 @@ config WILDFIRE_CHALLENGER_V2_NAND_PART_NAMES
 	---help---
 		Comma separated list of partition names.
 
+config WILDFIRE_CHALLENGER_V2_TOUCHSCREEN
+	bool "Goodix GT9xx capacitive touch panel"
+	default n
+	select INPUT
+	select INPUT_GT9XX
+	select STM32_I2C2
+	---help---
+		Enable the Goodix GT911/GT9157/GT917S 5-point capacitive touch
+		panel on I2C2 (SCL=PH4, SDA=PH5, RST=PI8, INT=PD13).
+		Registers /dev/input0 via the arch-level gt9xx driver.
+
 endif # ARCH_BOARD_WILDFIRE_STM32F429_CHALLENGER_V2

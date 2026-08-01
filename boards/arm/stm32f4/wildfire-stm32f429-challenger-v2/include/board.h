@@ -400,4 +400,43 @@
 #define GPIO_FMC_NADV    (GPIO_ALT|GPIO_AF12|GPIO_SPEED_100MHz|GPIO_PORTD|GPIO_PIN11)  /* PD11 - ALE */
 #define GPIO_FMC_NCLE    (GPIO_ALT|GPIO_AF12|GPIO_SPEED_100MHz|GPIO_PORTD|GPIO_PIN12)  /* PD12 - CLE */
 
+/* Goodix GT9xx capacitive touch panel (per Wildfire BSP bsp_i2c_touch.h)
+ *
+ *  IC       : Goodix GT911/GT9157/GT917S (5-point capacitive touch)
+ *  Bus      : I2C2 (hardware I2C; BSP used software I2C over the same pins)
+ *  I2C addr : 0x5D  (7-bit; BSP wrote 0xBA which is 0x5D<<1)
+ *  SCL      : PH4   (AF4)
+ *  SDA      : PH5   (AF4)
+ *  RST      : PI8   (GPIO output, active-low reset)
+ *  INT      : PD13  (GPIO input, rising-edge IRQ; BSP EXTI13)
+ *  Coor reg : 0x814E (GTP_READ_COOR_ADDR)
+ */
+
+#define GPIO_GT9XX_SCL \
+  (GPIO_ALT | GPIO_AF4 | GPIO_SPEED_50MHz | GPIO_OPENDRAIN | \
+   GPIO_PORTH | GPIO_PIN4)
+#define GPIO_GT9XX_SDA \
+  (GPIO_ALT | GPIO_AF4 | GPIO_SPEED_50MHz | GPIO_OPENDRAIN | \
+   GPIO_PORTH | GPIO_PIN5)
+#define GPIO_GT9XX_RST \
+  (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | \
+   GPIO_OUTPUT_CLEAR | GPIO_PORTI | GPIO_PIN8)
+#define GPIO_GT9XX_INT \
+  (GPIO_INPUT | GPIO_FLOAT | GPIO_PORTD | GPIO_PIN13)
+#define GPIO_GT9XX_INT_OUT \
+  (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | \
+   GPIO_OUTPUT_CLEAR | GPIO_PORTD | GPIO_PIN13)
+
+/* stm32_i2c_m3m4_v1_f40xxx.c references GPIO_I2C2_SCL/SDA (no suffix) for
+ * bus 2's pin pair. The F40xxx pinmap defines three I2C2 pairs; pair 3 is
+ * PH4/PH5 AF4 — exactly the Wildfire BSP touch pins. Alias so the arch I2C
+ * driver picks up the right pins.
+ */
+
+#define GPIO_I2C2_SCL   GPIO_I2C2_SCL_3
+#define GPIO_I2C2_SDA   GPIO_I2C2_SDA_3
+
+#define BOARD_GT9XX_I2C_PORT      2        /* I2C2 */
+#define BOARD_GT9XX_I2C_ADDR      0x5d     /* 7-bit */
+
 #endif /* __BOARDS_ARM_STM32F4_WILDFIRE_STM32F429_CHALLENGER_V2_INCLUDE_BOARD_H */

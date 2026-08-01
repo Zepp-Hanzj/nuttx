@@ -84,6 +84,10 @@ int stm32_spiflash_initialize(void);
 int stm32_nandflash_initialize(void);
 #endif
 
+#ifdef CONFIG_WILDFIRE_CHALLENGER_V2_TOUCHSCREEN
+int stm32_touchscreen_initialize(void);
+#endif
+
 /* LED test - directly toggle GPIO for debugging */
 #include "stm32_gpio.h"
 #include <arch/board/board.h>
@@ -391,6 +395,19 @@ int stm32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: stm32_nandflash_initialize failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_WILDFIRE_CHALLENGER_V2_TOUCHSCREEN
+  /* Initialize the Goodix GT9xx capacitive touch panel on I2C2.
+   * Registers /dev/input0 via the arch-level gt9xx driver.
+   */
+
+  ret = stm32_touchscreen_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_touchscreen_initialize failed: %d\n",
+             ret);
     }
 #endif
 
