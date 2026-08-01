@@ -343,6 +343,54 @@ static int w29n_rawread(FAR struct nand_raw_s *raw, off_t block,
   return OK;
 }
 
+static ssize_t w29n_rawreadbytes(FAR struct nand_raw_s *raw, off_t offset,
+                                 size_t nbytes, FAR uint8_t *buffer)
+{
+  const off_t devicesize = (off_t)W29N_DEVICE_SIZE * 1024 * 1024;
+  size_t remaining = nbytes;
+
+  if (offset < 0 || offset > devicesize || nbytes > devicesize - offset)
+    {
+      return -EIO;
+    }
+
+  while (remaining > 0)
+    {
+      uint32_t row = (uint32_t)offset / W29N_PAGE_SIZE;
+      unsigned int column = (unsigned int)offset % W29N_PAGE_SIZE;
+      size_t chunk = W29N_PAGE_SIZE - column;
+      size_t i;
+
+      if (chunk > remaining)
+        {
+          chunk = remaining;
+        }
+
+      nand_cmd(0x00);
+      nand_addr((uint8_t)(column & 0xff));
+      nand_addr((uint8_t)((column >> 8) & 0xff));
+      nand_addr((uint8_t)(row & 0xff));
+      nand_addr((uint8_t)((row >> 8) & 0xff));
+      nand_cmd(0x30);
+
+      up_udelay(1);
+      if (nand_wait_ready() < 0)
+        {
+          return -ETIMEDOUT;
+        }
+
+      for (i = 0; i < chunk; i++)
+        {
+          *buffer++ = nand_dataread();
+        }
+
+      offset    += chunk;
+      remaining -= chunk;
+    }
+
+  return nbytes;
+}
+
 static int w29n_rawwrite(FAR struct nand_raw_s *raw, off_t block,
                          unsigned int page, FAR const void *data,
                          FAR const void *spare)
@@ -430,6 +478,7 @@ int stm32_nandflash_initialize(void)
   raw->eraseblock = w29n_eraseblock;
   raw->rawread    = w29n_rawread;
   raw->rawwrite   = w29n_rawwrite;
+  raw->rawreadbytes = w29n_rawreadbytes;
 
   priv->mtd = nand_raw_initialize(raw);
   if (!priv->mtd)

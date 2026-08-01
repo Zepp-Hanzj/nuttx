@@ -793,6 +793,19 @@ static ssize_t nand_read(FAR struct mtd_dev_s *dev, off_t offset,
   raw   = nand->raw;
   model = &raw->model;
 
+  /* SMARTFS reads only a small header from each sector while mounting.  A
+   * lower half that supports column reads can avoid transferring a complete
+   * NAND page for every header.
+   */
+
+  if (raw->rawreadbytes != NULL)
+    {
+      nxmutex_lock(&nand->lock);
+      ret = raw->rawreadbytes(raw, offset, nbytes, buffer);
+      nxmutex_unlock(&nand->lock);
+      return ret;
+    }
+
   pagesperblock = nandmodel_pagesperblock(model);
   pagesize      = nandmodel_getpagesize(model);
   maxblock      = nandmodel_getdevblocks(model);

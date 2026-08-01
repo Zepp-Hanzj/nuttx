@@ -254,6 +254,13 @@ struct nand_raw_s
                        unsigned int page, FAR const void *data,
                        FAR const void *spare);
 
+  /* Optional optimized byte read.  When absent, the upper half implements
+   * MTD_READ by reading and slicing complete NAND pages.
+   */
+
+  CODE ssize_t (*rawreadbytes)(FAR struct nand_raw_s *raw, off_t offset,
+                               size_t nbytes, FAR uint8_t *buffer);
+
 #ifdef CONFIG_MTD_NAND_HWECC
   CODE int (*readpage)(FAR struct nand_raw_s *raw, off_t block,
                        unsigned int page, FAR void *data, FAR void *spare);
