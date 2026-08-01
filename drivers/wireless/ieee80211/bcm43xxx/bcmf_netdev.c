@@ -593,6 +593,7 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
   ret = bcmf_wl_active(priv, true);
   if (ret != OK)
     {
+      wlerr("ERROR: bcmf_wl_active failed: %d\n", ret);
       goto errout_in_critical_section;
     }
 
@@ -601,6 +602,7 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
   ret = bcmf_wl_enable(priv, true);
   if (ret != OK)
     {
+      wlerr("ERROR: WLC_UP failed: %d\n", ret);
       goto errout_in_wl_active;
     }
 
@@ -611,10 +613,15 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
   if (memcmp(&priv->bc_dev.d_mac.ether, &zmac, sizeof(zmac)) != 0)
     {
       out_len = ETHER_ADDR_LEN;
-      bcmf_cdc_iovar_request(priv, CHIP_STA_INTERFACE, true,
-                             IOVAR_STR_CUR_ETHERADDR,
-                             priv->bc_dev.d_mac.ether.ether_addr_octet,
-                             &out_len);
+      ret = bcmf_cdc_iovar_request(priv, CHIP_STA_INTERFACE, true,
+                                   IOVAR_STR_CUR_ETHERADDR,
+                                   priv->bc_dev.d_mac.ether.ether_addr_octet,
+                                   &out_len);
+      if (ret != OK)
+        {
+          wlerr("ERROR: setting MAC address failed: %d\n", ret);
+          goto errout_in_wl_active;
+        }
     }
 
   /* Query MAC address */
@@ -626,6 +633,7 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
                                &out_len);
   if (ret != OK)
     {
+      wlerr("ERROR: reading MAC address failed: %d\n", ret);
       goto errout_in_wl_active;
     }
 

@@ -197,13 +197,17 @@
 /* AP6181 Wi-Fi module ******************************************************/
 
 /* The AP6181 (BCM43362) shares PC8-PC12/PD2 with the TF-card socket.
- * PB13 drives WL_REG_ON (active high), and PA0 receives WL_HOST_WAKE
- * (active high).  AP6181 carries its own 26MHz crystal; LPO is not fitted.
+ * PB13 is shared by AP6181 WL_REG_ON and NAND R/B#.  Drive it low only to
+ * reset/power down the AP6181, then release it as an input; the board pull-up
+ * keeps WL_REG_ON high while allowing the NAND open-drain R/B# signal to be
+ * read.  PA0 receives WL_HOST_WAKE (active high).
  */
 
-#define GPIO_AP6181_REG_ON \
+#define GPIO_AP6181_REG_ON_LOW \
   (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | GPIO_OUTPUT_CLEAR | \
    GPIO_PORTB | GPIO_PIN13)
+#define GPIO_AP6181_REG_ON_RELEASE \
+  (GPIO_INPUT | GPIO_PULLUP | GPIO_PORTB | GPIO_PIN13)
 #define GPIO_AP6181_HOST_WAKE \
   (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | GPIO_PORTA | GPIO_PIN0)
 

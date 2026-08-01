@@ -483,7 +483,7 @@ int bcmf_bus_setup_interrupts(FAR struct bcmf_sdio_dev_s *sbus)
       return ret;
     }
 
-#ifndef CONFIG_IEEE80211_BROADCOM_SDIO_INBAND_IRQ
+#ifndef CONFIG_BCMFMAC_NO_OOB
   /* Redirect, configure and enable io for out-of-band interrupt signal */
 
   ret = bcmf_write_reg(sbus, 0, SDIO_CCCR_BRCM_SEPINT,
@@ -859,6 +859,7 @@ int bcmf_bus_sdio_active(FAR struct bcmf_dev_s *priv, bool active)
   ret = bcmf_hwinitialize(sbus);
   if (ret != OK)
     {
+      wlerr("ERROR: AP6181 hardware initialization failed: %d\n", ret);
       return ret;
     }
 
@@ -869,6 +870,7 @@ int bcmf_bus_sdio_active(FAR struct bcmf_dev_s *priv, bool active)
   ret = bcmf_probe(sbus);
   if (ret != OK)
     {
+      wlerr("ERROR: AP6181 SDIO probe failed: %d\n", ret);
       goto exit_uninit_hw;
     }
 
@@ -877,6 +879,7 @@ int bcmf_bus_sdio_active(FAR struct bcmf_dev_s *priv, bool active)
   ret = bcmf_businitialize(sbus);
   if (ret != OK)
     {
+      wlerr("ERROR: AP6181 firmware/bus initialization failed: %d\n", ret);
       goto exit_uninit_hw;
     }
 
@@ -885,6 +888,7 @@ int bcmf_bus_sdio_active(FAR struct bcmf_dev_s *priv, bool active)
   ret = bcmf_bus_setup_interrupts(sbus);
   if (ret != OK)
     {
+      wlerr("ERROR: AP6181 interrupt setup failed: %d\n", ret);
       goto exit_uninit_hw;
     }
 

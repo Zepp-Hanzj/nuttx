@@ -438,6 +438,11 @@ int bcmf_wl_active(FAR struct bcmf_dev_s *priv, bool active)
   ret = bcmf_bus_interface_active(priv, active);
   if (ret != OK || !active)
     {
+      if (ret != OK)
+        {
+          wlerr("ERROR: activating BCMF bus failed: %d\n", ret);
+        }
+
       return ret;
     }
 
@@ -449,6 +454,7 @@ int bcmf_wl_active(FAR struct bcmf_dev_s *priv, bool active)
   ret = bcmf_driver_download_clm(priv);
   if (ret != OK)
     {
+      wlerr("ERROR: downloading CLM failed: %d\n", ret);
       goto errout_in_sdio_active;
     }
 #endif
@@ -462,6 +468,7 @@ int bcmf_wl_active(FAR struct bcmf_dev_s *priv, bool active)
                                &out_len);
   if (ret != OK)
     {
+      wlerr("ERROR: disabling txglom failed: %d\n", ret);
       goto errout_in_sdio_active;
     }
 
@@ -473,6 +480,7 @@ int bcmf_wl_active(FAR struct bcmf_dev_s *priv, bool active)
                            (FAR uint8_t *)&value, &out_len);
   if (ret != OK)
     {
+      wlerr("ERROR: setting power-save mode failed: %d\n", ret);
       goto errout_in_sdio_active;
     }
 
@@ -484,6 +492,7 @@ int bcmf_wl_active(FAR struct bcmf_dev_s *priv, bool active)
                        (FAR uint8_t *)&value, &out_len);
   if (ret != OK)
     {
+      wlerr("ERROR: setting GMode failed: %d\n", ret);
       goto errout_in_sdio_active;
     }
 
@@ -497,6 +506,7 @@ int bcmf_wl_active(FAR struct bcmf_dev_s *priv, bool active)
                                    &out_len);
   if (ret != OK)
     {
+      wlerr("ERROR: disabling roaming failed: %d\n", ret);
       goto errout_in_sdio_active;
     }
 
@@ -513,6 +523,7 @@ int bcmf_wl_active(FAR struct bcmf_dev_s *priv, bool active)
                                tmp_buf, &out_len);
   if (ret != OK)
     {
+      wlerr("ERROR: setting WPA2 EAP version failed: %d\n", ret);
       goto errout_in_sdio_active;
     }
 
@@ -524,6 +535,7 @@ int bcmf_wl_active(FAR struct bcmf_dev_s *priv, bool active)
                                    &out_len);
   if (ret != OK)
     {
+      wlerr("ERROR: reading firmware version failed: %d\n", ret);
       goto errout_in_sdio_active;
     }
 

@@ -92,13 +92,11 @@ config WILDFIRE_CHALLENGER_V2_AP6181
 	depends on STM32_SDIO_CARD
 	depends on !WILDFIRE_CHALLENGER_V2_SD_CARD
 	select IEEE80211_BROADCOM_BCM43362
-	select IEEE80211_BROADCOM_SDIO_INBAND_IRQ
 	---help---
 		Enable the on-board AMPAK AP6181 Wi-Fi module.  The module uses a
 		Broadcom BCM43362 FullMAC device connected to SDIO, with WL_REG_ON
-		on PB13 and WL_HOST_WAKE on PA0.  Runtime data-ready interrupts use
-		the SDIO DAT1 signal on PC9; WL_HOST_WAKE is reserved for power
-		management.
+		on PB13 and the active-high out-of-band interrupt on
+		WL_HOST_WAKE/PA0.
 
 		The AP6181 and TF-card socket are wired directly to the same SDIO
 		signals on this board, without a bus multiplexer.  They therefore
