@@ -30,11 +30,12 @@ static void stm32_ap6181_set_power(bool power)
 {
   if (power)
     {
-      /* PB13 is also NAND R/B#.  Releasing the pin lets the external pull-up
-       * assert WL_REG_ON without fighting the NAND open-drain output.
+      /* The external pull-up is not sufficient to bring this module out of
+       * reset reliably.  NAND setup/mounting has completed before Wi-Fi is
+       * started, so actively drive the shared PB13 signal high here.
        */
 
-      stm32_configgpio(GPIO_AP6181_REG_ON_RELEASE);
+      stm32_configgpio(GPIO_AP6181_REG_ON_HIGH);
     }
   else
     {
