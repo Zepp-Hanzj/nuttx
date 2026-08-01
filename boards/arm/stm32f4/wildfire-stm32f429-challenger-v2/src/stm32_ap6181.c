@@ -22,18 +22,7 @@
 #include "stm32_sdio.h"
 #include "hardware/stm32f40xxx_memorymap.h"
 
-static CODE int (*g_ap6181_irq)(FAR void *arg);
-static FAR void *g_ap6181_irq_arg;
-
-static int stm32_ap6181_interrupt(int irq, FAR void *context, FAR void *arg)
-{
-  if (g_ap6181_irq != NULL)
-    {
-      return g_ap6181_irq(g_ap6181_irq_arg);
-    }
-
-  return OK;
-}
+static FAR struct sdio_dev_s *g_ap6181_sdio;
 
 void bcmf_board_initialize(int minor)
 {
@@ -73,15 +62,17 @@ void bcmf_board_setup_oob_irq(int minor, CODE int (*func)(FAR void *),
       return;
     }
 
-  g_ap6181_irq     = func;
-  g_ap6181_irq_arg = arg;
-
-  /* BCMF configures SDIO_CCCR_BRCM_SEPINT for an active-high separate
-   * interrupt.  Match that setting with PA0 rising-edge EXTI.
+  /* This callback is the BCM43362 SDIO function interrupt, not the
+   * WL_HOST_WAKE signal.  Route it through SDIO DAT1 (PC9), as done by the
+   * upstream Photon BCM43362 board support.  WL_HOST_WAKE on PA0 is only a
+   * host power-management wake signal and does not report every control or
+   * data response.
    */
 
-  stm32_gpiosetevent(GPIO_AP6181_HOST_WAKE, true, false, true,
-                     stm32_ap6181_interrupt, NULL);
+  if (g_ap6181_sdio != NULL)
+    {
+      sdio_set_sdio_card_isr(g_ap6181_sdio, func, arg);
+    }
 }
 
 bool bcmf_board_etheraddr(FAR struct ether_addr *ethaddr)
@@ -116,6 +107,8 @@ int stm32_ap6181_initialize(void)
       syslog(LOG_ERR, "AP6181: sdio_initialize failed\n");
       return -ENODEV;
     }
+
+  g_ap6181_sdio = sdio;
 
   ret = bcmf_sdio_initialize(BOARD_AP6181_MINOR, sdio);
   if (ret < 0)
