@@ -414,6 +414,19 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
   ret = SDIO_RECVR4(dev, SDIO_CMD5, &data);
   if (ret != OK)
     {
+      /* Some Broadcom SDIO devices, including the AP6181 used by the
+       * Wildfire F429V2 board, do not return an R4 here.  Cypress WICED's
+       * STM32F4 port deliberately sends CMD5 with NO_RESPONSE and proceeds
+       * directly to CMD3.  Keep the standard R4 path when available, but
+       * provide the same compatibility fallback.
+       */
+
+      if (ret == -ETIMEDOUT)
+        {
+          wlwarn("SDIO CMD5 returned no R4; trying CMD3 fallback\n");
+          goto request_rca;
+        }
+
       wlerr("ERROR: SDIO probe CMD5 response failed: %d\n", ret);
       goto err;
     }
@@ -443,6 +456,7 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
 
   /* Device is in Card Identification Mode, request device RCA */
 
+request_rca:
   ret = sdio_sendcmdpoll(dev, SD_CMD3, 0);
   if (ret != OK)
     {
