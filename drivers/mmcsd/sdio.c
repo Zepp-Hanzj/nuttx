@@ -345,7 +345,8 @@ int sdio_io_rw_extended(FAR struct sdio_dev_s *dev, bool write,
 
   if (resp.flags.error || (wkupevent & SDIOWAIT_ERROR))
     {
-      wlerr("error 1\n");
+      wlerr("ERROR: CMD53 transfer failed: event=%08" PRIx32
+            " r5=%08" PRIx32 "\n", (uint32_t)wkupevent, data);
       return -EIO;
     }
 
@@ -482,10 +483,10 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
   goto rca_ready;
 
 legacy_enumeration:
-  /* Match the AP6181 sequence used by Cypress WICED on STM32F4: repeatedly
-   * send CMD0, CMD5 without waiting for R4, and CMD3 until the module returns
-   * an RCA.  The module can need several milliseconds after WL_REG_ON before
-   * its SDIO function responds.
+  /* Match the AP6181 sequence used by Cypress WICED on STM32F4:
+   * repeatedly send CMD0, CMD5 without waiting for R4, and CMD3 until the
+   * module returns an RCA.  The module can need several milliseconds after
+   * WL_REG_ON before its SDIO function responds.
    */
 
   for (attempt = 0; attempt < SDIO_ENUM_RETRIES; attempt++)
@@ -535,10 +536,20 @@ rca_ready:
       goto err;
     }
 
+  sdio_givelock(dev);
+
+#ifdef CONFIG_SDIO_WIDTH_D1_ONLY
+  /* Keep both the I/O card and host in the one-bit mode selected by the
+   * board configuration.
+   */
+
+  SDIO_WIDEBUS(dev, false);
+  return OK;
+#else
   /* Configure 4 bits bus width */
 
-  sdio_givelock(dev);
   return sdio_set_wide_bus(dev);
+#endif
 
 err:
   sdio_givelock(dev);

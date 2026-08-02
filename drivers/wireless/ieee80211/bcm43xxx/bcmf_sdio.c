@@ -353,7 +353,11 @@ int bcmf_probe(FAR struct bcmf_sdio_dev_s *sbus)
     }
 #endif
 
+#ifdef CONFIG_SDIO_WIDTH_D1_ONLY
+  SDIO_CLOCK(sbus->sdio_dev, CLOCK_SD_TRANSFER_1BIT);
+#else
   SDIO_CLOCK(sbus->sdio_dev, CLOCK_SD_TRANSFER_4BIT);
+#endif
   nxsched_usleep(BCMF_CLOCK_SETUP_DELAY_MS * 1000);
 
   /* Enable bus FN1 */
