@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <string.h>
+#include <syslog.h>
 
 #include <nuttx/compiler.h>
 #include <nuttx/arch.h>
@@ -430,7 +431,8 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
 
       if (ret == -ETIMEDOUT)
         {
-          wlwarn("SDIO CMD5 returned no R4; trying CMD3 fallback\n");
+          syslog(LOG_INFO,
+                 "SDIO: CMD5 returned no R4; using AP6181 enumeration\n");
           goto legacy_enumeration;
         }
 
@@ -497,7 +499,8 @@ legacy_enumeration:
           ret = SDIO_RECVR6(dev, SD_CMD3, &data);
           if (ret == OK)
             {
-              wlinfo("AP6181 legacy enumeration succeeded after %d tries\n",
+              syslog(LOG_INFO,
+                     "SDIO: AP6181 enumeration succeeded after %d tries\n",
                      attempt + 1);
               goto rca_ready;
             }
