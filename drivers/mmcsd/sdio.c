@@ -394,6 +394,7 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
   ret = sdio_sendcmdpoll(dev, MMCSD_CMD0, 0);
   if (ret != OK)
     {
+      wlerr("ERROR: SDIO probe CMD0 failed: %d\n", ret);
       goto err;
     }
 
@@ -404,6 +405,7 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
   ret = sdio_sendcmdpoll(dev, SDIO_CMD5, 0);
   if (ret != OK)
     {
+      wlerr("ERROR: SDIO probe CMD5 send failed: %d\n", ret);
       goto err;
     }
 
@@ -412,6 +414,7 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
   ret = SDIO_RECVR4(dev, SDIO_CMD5, &data);
   if (ret != OK)
     {
+      wlerr("ERROR: SDIO probe CMD5 response failed: %d\n", ret);
       goto err;
     }
 
@@ -425,6 +428,8 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
     }
   else
     {
+      wlerr("ERROR: SDIO probe returned invalid OCR: 0x%08" PRIx32 "\n",
+            data);
       ret = -EINVAL;
       goto err;
     }
@@ -432,6 +437,7 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
   ret = sdio_sendcmdpoll(dev, SDIO_CMD5, data);
   if (ret != OK)
     {
+      wlerr("ERROR: SDIO probe CMD5 voltage select failed: %d\n", ret);
       goto err;
     }
 
@@ -440,6 +446,7 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
   ret = sdio_sendcmdpoll(dev, SD_CMD3, 0);
   if (ret != OK)
     {
+      wlerr("ERROR: SDIO probe CMD3 send failed: %d\n", ret);
       goto err;
     }
 

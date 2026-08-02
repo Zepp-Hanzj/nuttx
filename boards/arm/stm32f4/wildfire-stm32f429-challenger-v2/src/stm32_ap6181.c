@@ -28,19 +28,7 @@ static bool g_ap6181_irq_logged;
 
 static void stm32_ap6181_set_power(bool power)
 {
-  if (power)
-    {
-      /* The external pull-up is not sufficient to bring this module out of
-       * reset reliably.  NAND setup/mounting has completed before Wi-Fi is
-       * started, so actively drive the shared PB13 signal high here.
-       */
-
-      stm32_configgpio(GPIO_AP6181_REG_ON_HIGH);
-    }
-  else
-    {
-      stm32_configgpio(GPIO_AP6181_REG_ON_LOW);
-    }
+  stm32_gpiowrite(GPIO_AP6181_REG_ON, power);
 }
 
 static int stm32_ap6181_interrupt(int irq, FAR void *context, FAR void *arg)
@@ -63,6 +51,7 @@ void bcmf_board_initialize(int minor)
 {
   if (minor == BOARD_AP6181_MINOR)
     {
+      stm32_configgpio(GPIO_AP6181_REG_ON);
       stm32_ap6181_set_power(false);
       stm32_configgpio(GPIO_AP6181_HOST_WAKE);
     }
@@ -85,6 +74,17 @@ void bcmf_board_reset(int minor, bool reset)
   if (minor == BOARD_AP6181_MINOR)
     {
       stm32_ap6181_set_power(!reset);
+
+      if (!reset)
+        {
+          /* The module data sheet requires WL_REG_ON to be driven (never
+           * floated).  Allow its regulators and crystal to settle before
+           * issuing the first SDIO command.
+           */
+
+          up_mdelay(200);
+          syslog(LOG_INFO, "AP6181: WL_REG_ON high, SDIO startup delay done\n");
+        }
     }
 }
 
