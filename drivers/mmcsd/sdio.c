@@ -40,6 +40,12 @@
 
 #define SDIO_CMD53_TIMEOUT_MS 1000
 #define SDIO_IDLE_DELAY_MS    50
+#define SDIO_ENUM_RETRIES     500
+
+/* AP6181-compatible CMD5 form used by the Cypress WICED STM32F4 port. */
+
+#define SDIO_CMD5_NORSP (SDIO_CMDIDX5 | MMCSD_NO_RESPONSE | \
+                         MMCSD_NODATAXFR)
 
 /****************************************************************************
  * Private Types
@@ -383,6 +389,7 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
 {
   int ret;
   int bit;
+  int attempt;
   uint32_t data = 0;
 
   nxmutex_init(&dev->mutex);
@@ -424,7 +431,7 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
       if (ret == -ETIMEDOUT)
         {
           wlwarn("SDIO CMD5 returned no R4; trying CMD3 fallback\n");
-          goto request_rca;
+          goto legacy_enumeration;
         }
 
       wlerr("ERROR: SDIO probe CMD5 response failed: %d\n", ret);
@@ -454,9 +461,8 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
       goto err;
     }
 
-  /* Device is in Card Identification Mode, request device RCA */
+  /* Device is in Card Identification Mode, request device RCA. */
 
-request_rca:
   ret = sdio_sendcmdpoll(dev, SD_CMD3, 0);
   if (ret != OK)
     {
@@ -470,6 +476,41 @@ request_rca:
       wlerr("ERROR: RCA request failed: %d\n", ret);
       goto err;
     }
+
+  goto rca_ready;
+
+legacy_enumeration:
+  /* Match the AP6181 sequence used by Cypress WICED on STM32F4: repeatedly
+   * send CMD0, CMD5 without waiting for R4, and CMD3 until the module returns
+   * an RCA.  The module can need several milliseconds after WL_REG_ON before
+   * its SDIO function responds.
+   */
+
+  for (attempt = 0; attempt < SDIO_ENUM_RETRIES; attempt++)
+    {
+      sdio_sendcmdpoll(dev, MMCSD_CMD0, 0);
+      sdio_sendcmdpoll(dev, SDIO_CMD5_NORSP, 0);
+
+      ret = sdio_sendcmdpoll(dev, SD_CMD3, 0);
+      if (ret == OK)
+        {
+          ret = SDIO_RECVR6(dev, SD_CMD3, &data);
+          if (ret == OK)
+            {
+              wlinfo("AP6181 legacy enumeration succeeded after %d tries\n",
+                     attempt + 1);
+              goto rca_ready;
+            }
+        }
+
+      nxsched_usleep(1000);
+    }
+
+  wlerr("ERROR: AP6181 CMD0/CMD5/CMD3 enumeration timed out\n");
+  ret = -ETIMEDOUT;
+  goto err;
+
+rca_ready:
 
   wlinfo("rca is %" PRIx32 "\n", data >> 16);
 
