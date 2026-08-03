@@ -681,6 +681,9 @@ bool bcmf_core_isup(FAR bcmf_interface_dev_t *ibus, unsigned int core)
 {
   uint32_t value = 0;
   uint32_t base;
+#ifdef CONFIG_IEEE80211_BROADCOM_BCM43362
+  uint8_t value8;
+#endif
 
   if (core >= MAX_CORE_ID)
     {
@@ -689,6 +692,30 @@ bool bcmf_core_isup(FAR bcmf_interface_dev_t *ibus, unsigned int core)
     }
 
   base = ibus->chip->core_base[core];
+
+#ifdef CONFIG_IEEE80211_BROADCOM_BCM43362
+  /* The BCM43362 AI wrapper exposes IOCTRL and RESETCTRL as byte
+   * registers.  Four-byte CMD53 accesses are rejected by the AP6181 while
+   * its cores are changing reset state.  Match the Cypress WICED sequence
+   * and use CMD52 byte accesses for these registers.
+   */
+
+  if (ibus->cur_chip_id == SDIO_DEVICE_ID_BROADCOM_43362)
+    {
+      if (bcmf_read_sbregb(ibus, base + BCMA_IOCTL, &value8) != OK ||
+          (value8 & (BCMA_IOCTL_FGC | BCMA_IOCTL_CLK)) != BCMA_IOCTL_CLK)
+        {
+          return false;
+        }
+
+      if (bcmf_read_sbregb(ibus, base + BCMA_RESET_CTL, &value8) != OK)
+        {
+          return false;
+        }
+
+      return (value8 & BCMA_RESET_CTL_RESET) == 0;
+    }
+#endif
 
   bcmf_read_sbregw(ibus, base + BCMA_IOCTL, &value);
 
@@ -708,6 +735,9 @@ void bcmf_core_disable(FAR bcmf_interface_dev_t *ibus,
                        uint32_t reset)
 {
   uint32_t value;
+#ifdef CONFIG_IEEE80211_BROADCOM_BCM43362
+  uint8_t value8;
+#endif
 
   if (core >= MAX_CORE_ID)
     {
@@ -716,6 +746,34 @@ void bcmf_core_disable(FAR bcmf_interface_dev_t *ibus,
     }
 
   uint32_t base = ibus->chip->core_base[core];
+
+#ifdef CONFIG_IEEE80211_BROADCOM_BCM43362
+  if (ibus->cur_chip_id == SDIO_DEVICE_ID_BROADCOM_43362)
+    {
+      if (bcmf_read_sbregb(ibus, base + BCMA_RESET_CTL, &value8) != OK)
+        {
+          return;
+        }
+
+      if ((value8 & BCMA_RESET_CTL_RESET) != 0)
+        {
+          return;
+        }
+
+      if (bcmf_write_sbregb(ibus, base + BCMA_IOCTL,
+                            (uint8_t)prereset) != OK ||
+          bcmf_read_sbregb(ibus, base + BCMA_IOCTL, &value8) != OK)
+        {
+          return;
+        }
+
+      nxsched_usleep(1000);
+      bcmf_write_sbregb(ibus, base + BCMA_RESET_CTL,
+                        BCMA_RESET_CTL_RESET);
+      nxsched_usleep(1000);
+      return;
+    }
+#endif
 
   /* Check if core is already in reset state.
    * If core is already in reset state, skip reset.
@@ -765,6 +823,36 @@ void bcmf_core_reset(FAR bcmf_interface_dev_t *ibus,
     }
 
   base = ibus->chip->core_base[core];
+
+#ifdef CONFIG_IEEE80211_BROADCOM_BCM43362
+  if (ibus->cur_chip_id == SDIO_DEVICE_ID_BROADCOM_43362)
+    {
+      uint8_t value8;
+
+      bcmf_core_disable(ibus, core, prereset, reset);
+
+      if (bcmf_write_sbregb(ibus, base + BCMA_IOCTL,
+                            (uint8_t)(reset | BCMA_IOCTL_FGC |
+                                      BCMA_IOCTL_CLK)) != OK ||
+          bcmf_read_sbregb(ibus, base + BCMA_IOCTL, &value8) != OK ||
+          bcmf_write_sbregb(ibus, base + BCMA_RESET_CTL, 0) != OK)
+        {
+          return;
+        }
+
+      nxsched_usleep(1000);
+
+      if (bcmf_write_sbregb(ibus, base + BCMA_IOCTL,
+                            (uint8_t)(postreset | BCMA_IOCTL_CLK)) != OK ||
+          bcmf_read_sbregb(ibus, base + BCMA_IOCTL, &value8) != OK)
+        {
+          return;
+        }
+
+      nxsched_usleep(1000);
+      return;
+    }
+#endif
 
   /* Put core in reset state */
 
