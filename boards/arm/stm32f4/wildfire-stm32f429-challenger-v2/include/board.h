@@ -180,12 +180,14 @@
 /* SDIO clock configuration (48MHz max SDIO clock, 393KHz init clock)
  * SDIOCLK = 48MHz (from PLL)
  * Init clock: SDIOCLK / (120 + 2) = 393.4KHz, matching the AP6181 example
- * Transfer clock: SDIOCLK / (1 + 2) = 16MHz (for SD card)
+ * Wi-Fi transfer clock: SDIOCLK / (10 + 2) = 4MHz.  The AP6181 signals
+ * share the TF-card traces, so start conservatively until signal integrity
+ * has been verified on hardware.
  */
 
 #define SDIO_INIT_CLKDIV      (120 << SDIO_CLKCR_CLKDIV_SHIFT)
 #define SDIO_MMCXFR_CLKDIV    (1 << SDIO_CLKCR_CLKDIV_SHIFT)
-#define SDIO_SDXFR_CLKDIV     (1 << SDIO_CLKCR_CLKDIV_SHIFT)
+#define SDIO_SDXFR_CLKDIV     (10 << SDIO_CLKCR_CLKDIV_SHIFT)
 
 /* STM32F4 SDIO DMA2 channel 4 can use stream 3 or stream 6.  Use the
  * conventional stream 3 mapping; no enabled board peripheral conflicts with
