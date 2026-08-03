@@ -381,6 +381,7 @@ exit_error:
 
 int bcmf_businitialize(FAR struct bcmf_sdio_dev_s *sbus)
 {
+  uint32_t cmd53_probe = 0;
   int ret;
   int loops;
   uint8_t value;
@@ -437,6 +438,17 @@ int bcmf_businitialize(FAR struct bcmf_sdio_dev_s *sbus)
     {
       return ret;
     }
+
+  /* The first normal CMD53 is a four-byte backplane read.  Probe the same
+   * SDIO data path with a harmless one-byte read first, so a board failure
+   * distinguishes the physical DAT0 path from a backplane access issue.
+   */
+
+  ret = sdio_io_rw_extended(sbus->sdio_dev, false, 1,
+                            SBSDIO_FUNC1_CHIPCLKCSR, true,
+                            (FAR uint8_t *)&cmd53_probe, 1, 0);
+  wlwarn("AP6181: CMD53 DAT0 probe ret=%d value=%02" PRIx32 "\n",
+         ret, cmd53_probe & 0xff);
 
   /* Do chip specific initialization */
 
