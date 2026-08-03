@@ -383,6 +383,7 @@ exit_error:
 
 int bcmf_businitialize(FAR struct bcmf_sdio_dev_s *sbus)
 {
+  uint32_t cmd53_warmup = 0;
   int ret;
   int loops;
   uint8_t value;
@@ -439,6 +440,21 @@ int bcmf_businitialize(FAR struct bcmf_sdio_dev_s *sbus)
     {
       return ret;
     }
+
+  /* The STM32F4 SDIO data path can time out on its first CMD53 read after
+   * AP6181 function 1 is enabled, while subsequent transfers operate
+   * normally.  Perform one harmless byte-mode read before the first 32-bit
+   * backplane access.  The AP6181 has already accepted CMD52 accesses at
+   * this point, so a failure here is transient and must not abort startup.
+   */
+
+  ret = sdio_io_rw_extended(sbus->sdio_dev, false, 1,
+                            SBSDIO_FUNC1_CHIPCLKCSR, true,
+                            (FAR uint8_t *)&cmd53_warmup, 1, 0);
+  syslog(LOG_INFO,
+         "AP6181: initial CMD53 warm-up ret=%d value=%02" PRIx32 "\n",
+         ret, cmd53_warmup & 0xff);
+  nxsched_usleep(1000);
 
   /* Do chip specific initialization */
 
@@ -871,6 +887,16 @@ int bcmf_transfer_bytes(FAR struct bcmf_sdio_dev_s *sbus, bool write,
             }
 
           return OK;
+        }
+
+      if (attempt == 0 || attempt + 1 == retries)
+        {
+          syslog(LOG_ERR,
+                 "AP6181: CMD53 %s failed ret=%d fn=%u addr=%05" PRIx32
+                 " len=%u block=%u count=%u attempt=%u/%u\n",
+                 write ? "write" : "read", ret, function,
+                 address & 0x1ffff, len, blocklen, nblocks,
+                 attempt + 1, retries);
         }
 
       nxsched_usleep(1000);

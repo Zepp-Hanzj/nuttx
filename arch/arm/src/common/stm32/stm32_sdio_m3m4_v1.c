@@ -1477,6 +1477,15 @@ static int stm32_interrupt(int irq, void *context, void *arg)
 
               mcerr("ERROR: Data timeout, remaining: %d\n",
                      priv->remaining);
+              mcerr("ERROR: SDIO ARG=%08" PRIx32 " CLKCR=%08" PRIx32
+                    " DCTRL=%08" PRIx32 " DLEN=%08" PRIx32
+                    " DCOUNT=%08" PRIx32 " STA=%08" PRIx32
+                    " FIFOCNT=%08" PRIx32 " RESP1=%08" PRIx32 "\n",
+                    getreg32(STM32_SDIO_ARG), getreg32(STM32_SDIO_CLKCR),
+                    getreg32(STM32_SDIO_DCTRL), getreg32(STM32_SDIO_DLEN),
+                    getreg32(STM32_SDIO_DCOUNT), getreg32(STM32_SDIO_STA),
+                    getreg32(STM32_SDIO_FIFOCNT),
+                    getreg32(STM32_SDIO_RESP1));
               stm32_endtransfer(priv,
                                 SDIOWAIT_TRANSFERDONE | SDIOWAIT_TIMEOUT);
             }
