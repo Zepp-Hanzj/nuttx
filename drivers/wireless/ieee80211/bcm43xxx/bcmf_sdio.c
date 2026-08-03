@@ -632,6 +632,20 @@ static bool brcm_chip_sr_capable(FAR struct bcmf_sdio_dev_s *sbus)
   uint32_t srctrl = 0;
   int ret;
 
+  /* BCM43362 firmware uses the legacy HT-clock sleep sequence and has no
+   * Save/Restore initialization.  Reading SR_CONTROL1 after starting this
+   * firmware produces an invalid data CRC on AP6181 and leaves the host
+   * waiting on an optional capability probe.  This matches Cypress WICED's
+   * BCM43362-specific implementation, which does not access the SR engine.
+   */
+
+  if (sbus->cur_chip_id == SDIO_DEVICE_ID_BROADCOM_43362)
+    {
+      syslog(LOG_INFO,
+             "AP6181: Save/Restore unsupported, using legacy sleep\n");
+      return false;
+    }
+
   /* Check if fw initialized sr engine */
 
   ret = bcmf_read_sbregw(sbus, CHIPCOMMON_SR_CONTROL1, &srctrl);
