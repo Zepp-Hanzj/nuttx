@@ -200,9 +200,10 @@
 /* AP6181 Wi-Fi module ******************************************************/
 
 /* The AP6181 (BCM43362) shares PC8-PC12/PD2 with the TF-card socket.
- * PB13 is shared by AP6181 WL_REG_ON and NAND R/B#.  NAND initialization
- * finishes before Wi-Fi is started; after that PB13 is kept as an output and
- * driven high.  PA0 receives WL_HOST_WAKE (active high).
+ * PB13 is also connected to the NAND R/B# open-drain output on the core
+ * board, so NAND activity can pull AP6181 WL_REG_ON low.  The Wi-Fi board
+ * configuration must therefore leave NAND disabled.  PA0 receives
+ * WL_HOST_WAKE (active high).
  */
 
 #define GPIO_AP6181_REG_ON \

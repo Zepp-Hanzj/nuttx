@@ -531,6 +531,18 @@ int bcmf_bus_setup_interrupts(FAR struct bcmf_sdio_dev_s *sbus)
 
 int bcmf_hwinitialize(FAR struct bcmf_sdio_dev_s *sbus)
 {
+  /* Restore the host controller and cached card state before every power-up.
+   * This is required after a failed ifup, because the same registered wlan
+   * device is retried without reconstructing its bus object.
+   */
+
+  SDIO_RESET(sbus->sdio_dev);
+  sbus->backplane_current_addr = 0;
+  sbus->intstatus              = 0;
+  sbus->irq_pending            = false;
+  sbus->sleeping               = true;
+  sbus->kso_enable             = false;
+
   /* Power device */
 
   bcmf_board_power(sbus->minor, true);
