@@ -447,7 +447,8 @@ int bcmf_businitialize(FAR struct bcmf_sdio_dev_s *sbus)
   ret = sdio_io_rw_extended(sbus->sdio_dev, false, 1,
                             SBSDIO_FUNC1_CHIPCLKCSR, true,
                             (FAR uint8_t *)&cmd53_probe, 1, 0);
-  wlwarn("AP6181: CMD53 DAT0 probe ret=%d value=%02" PRIx32 "\n",
+  syslog(LOG_INFO,
+         "AP6181: CMD53 DAT0 probe ret=%d value=%02" PRIx32 "\n",
          ret, cmd53_probe & 0xff);
 
   /* Do chip specific initialization */
