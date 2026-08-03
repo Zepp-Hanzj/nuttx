@@ -290,6 +290,7 @@ int sdio_io_rw_extended(FAR struct sdio_dev_s *dev, bool write,
     {
       wlinfo("prep write %d %d\n", blocklen, nblocks);
 
+#ifdef CONFIG_SDIO_DMA
       /* Get the capabilities of the SDIO hardware */
 
       if ((SDIO_CAPABILITIES(dev) & SDIO_CAPS_DMABEFOREWRITE) != 0)
@@ -308,11 +309,35 @@ int sdio_io_rw_extended(FAR struct sdio_dev_s *dev, bool write,
           SDIO_DMASENDSETUP(dev, buf, blocklen * nblocks);
           wkupevent = SDIO_EVENTWAIT(dev);
         }
+#else
+      ret = SDIO_SENDSETUP(dev, buf, blocklen * nblocks);
+      if (ret < 0)
+        {
+          SDIO_CANCEL(dev);
+          sdio_givelock(dev);
+          return ret;
+        }
+
+      sdio_sendcmdpoll(dev, SD_ACMD53WR, arg.value);
+      ret = SDIO_RECVR5(dev, SD_ACMD53WR, &data);
+      wkupevent = SDIO_EVENTWAIT(dev);
+#endif
     }
   else
     {
       wlinfo("prep read %d\n", blocklen * nblocks);
+#ifdef CONFIG_SDIO_DMA
       SDIO_DMARECVSETUP(dev, buf, blocklen * nblocks);
+#else
+      ret = SDIO_RECVSETUP(dev, buf, blocklen * nblocks);
+      if (ret < 0)
+        {
+          SDIO_CANCEL(dev);
+          sdio_givelock(dev);
+          return ret;
+        }
+#endif
+
       SDIO_SENDCMD(dev, SD_ACMD53RD, arg.value);
 
       wkupevent = SDIO_EVENTWAIT(dev);
