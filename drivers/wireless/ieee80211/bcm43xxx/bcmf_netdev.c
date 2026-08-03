@@ -31,6 +31,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <string.h>
+#include <syslog.h>
 #include <errno.h>
 #include <assert.h>
 #include <nuttx/debug.h>
@@ -577,25 +578,29 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
 {
   FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)dev->d_private;
   struct ether_addr zmac;
-  irqstate_t flags;
   uint32_t out_len;
   int ret = OK;
 
-  /* Disable the hardware interrupt */
-
-  flags = enter_critical_section();
-
   if (priv->bc_bifup)
     {
-      goto errout_in_critical_section;
+      return OK;
     }
+
+  /* This path uploads firmware, waits on SDIO interrupts, and exchanges
+   * CDC control messages through the bcmf worker thread.  It must remain
+   * schedulable; a critical section here deadlocks on the first WLC_UP.
+   * Network interface callbacks are already serialized by the network
+   * stack.
+   */
 
   ret = bcmf_wl_active(priv, true);
   if (ret != OK)
     {
       wlerr("ERROR: bcmf_wl_active failed: %d\n", ret);
-      goto errout_in_critical_section;
+      goto errout;
     }
+
+  syslog(LOG_INFO, "AP6181: bus active, starting firmware control\n");
 
   /* Enable chip */
 
@@ -605,6 +610,8 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
       wlerr("ERROR: WLC_UP failed: %d\n", ret);
       goto errout_in_wl_active;
     }
+
+  syslog(LOG_INFO, "AP6181: firmware control channel ready\n");
 
   /* Set customized MAC address */
 
@@ -653,14 +660,13 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
 
   bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_HIGH);
 
-  goto errout_in_critical_section;
+  syslog(LOG_INFO, "AP6181: wlan interface is up\n");
+  goto errout;
 
 errout_in_wl_active:
   bcmf_wl_active(priv, false);
 
-errout_in_critical_section:
-  leave_critical_section(flags);
-
+errout:
   wlinfo("bcmf_ifup done: %d\n", ret);
 
   return ret;
@@ -685,11 +691,6 @@ errout_in_critical_section:
 static int bcmf_ifdown(FAR struct net_driver_s *dev)
 {
   FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)dev->d_private;
-  irqstate_t flags;
-
-  /* Disable the hardware interrupt */
-
-  flags = enter_critical_section();
 
   if (priv->bc_bifup)
     {
@@ -714,8 +715,6 @@ static int bcmf_ifdown(FAR struct net_driver_s *dev)
       bcmf_wl_enable(priv, false);
       bcmf_wl_active(priv, false);
     }
-
-  leave_critical_section(flags);
 
   return OK;
 }
