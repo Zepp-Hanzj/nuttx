@@ -31,6 +31,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
+#include <syslog.h>
 #include <nuttx/debug.h>
 #include <errno.h>
 #include <assert.h>
@@ -60,6 +61,7 @@
 #define BCMF_DEVICE_RESET_DELAY_MS 10
 #define BCMF_DEVICE_START_DELAY_MS 10
 #define BCMF_CLOCK_SETUP_DELAY_MS  500
+#define BCMF_BACKPLANE_RETRIES     5
 
 #define BCMF_THREAD_NAME       "bcmf"
 #define BCMF_THREAD_STACK_SIZE 2048
@@ -381,7 +383,6 @@ exit_error:
 
 int bcmf_businitialize(FAR struct bcmf_sdio_dev_s *sbus)
 {
-  uint32_t cmd53_probe = 0;
   int ret;
   int loops;
   uint8_t value;
@@ -438,18 +439,6 @@ int bcmf_businitialize(FAR struct bcmf_sdio_dev_s *sbus)
     {
       return ret;
     }
-
-  /* The first normal CMD53 is a four-byte backplane read.  Probe the same
-   * SDIO data path with a harmless one-byte read first, so a board failure
-   * distinguishes the physical DAT0 path from a backplane access issue.
-   */
-
-  ret = sdio_io_rw_extended(sbus->sdio_dev, false, 1,
-                            SBSDIO_FUNC1_CHIPCLKCSR, true,
-                            (FAR uint8_t *)&cmd53_probe, 1, 0);
-  syslog(LOG_INFO,
-         "AP6181: CMD53 DAT0 probe ret=%d value=%02" PRIx32 "\n",
-         ret, cmd53_probe & 0xff);
 
   /* Do chip specific initialization */
 
@@ -790,6 +779,9 @@ int bcmf_transfer_bytes(FAR struct bcmf_sdio_dev_s *sbus, bool write,
 {
   unsigned int blocklen;
   unsigned int nblocks;
+  unsigned int retries;
+  unsigned int attempt;
+  int ret;
 
   if (!sbus->ready)
     {
@@ -832,8 +824,33 @@ int bcmf_transfer_bytes(FAR struct bcmf_sdio_dev_s *sbus, bool write,
       nblocks = 0;
     }
 
-  return sdio_io_rw_extended(sbus->sdio_dev, write, function, address, true,
-                             buf, blocklen, nblocks);
+  /* Cypress WICED retries transient CMD53 failures while the WLAN core is
+   * changing clock or reset state.  Restrict retries to function 1
+   * backplane accesses so function 2 frame writes cannot be duplicated.
+   */
+
+  retries = function == 1 ? BCMF_BACKPLANE_RETRIES : 1;
+  for (attempt = 0; attempt < retries; attempt++)
+    {
+      ret = sdio_io_rw_extended(sbus->sdio_dev, write, function, address,
+                                true, buf, blocklen, nblocks);
+      if (ret == OK)
+        {
+          if (attempt > 0)
+            {
+              syslog(LOG_INFO,
+                     "AP6181: CMD53 recovered after %u retries, "
+                     "addr=%05" PRIx32 "\n",
+                     attempt, address & 0x1ffff);
+            }
+
+          return OK;
+        }
+
+      nxsched_usleep(1000);
+    }
+
+  return ret;
 }
 
 /****************************************************************************

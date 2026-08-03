@@ -277,12 +277,6 @@ int sdio_io_rw_extended(FAR struct sdio_dev_s *dev, bool write,
       arg.cmd53.byte_block_count = nblocks;
     }
 
-  syslog(LOG_INFO,
-         "SDIO: CMD53 %s fn=%u addr=%05" PRIx32
-         " inc=%u block=%u count=%u arg=%08" PRIx32 "\n",
-         write ? "write" : "read", function, address & 0x1ffff,
-         inc_addr, blocklen, nblocks, arg.value);
-
   sdio_takelock(dev);
 
   /* Send CMD53 command */
@@ -350,12 +344,6 @@ int sdio_io_rw_extended(FAR struct sdio_dev_s *dev, bool write,
       ret = SDIO_RECVR5(dev, SD_ACMD53RD, &data);
     }
 
-  wlinfo("Transaction ends\n");
-  sdio_sendcmdpoll(dev, SD_ACMD52ABRT, 0);
-
-  /* There may not be a response to this, so don't look for one */
-
-  SDIO_RECVR1(dev, SD_ACMD52ABRT, &data);
   sdio_givelock(dev);
 
   if (ret != OK)
