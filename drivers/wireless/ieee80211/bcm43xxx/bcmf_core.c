@@ -74,6 +74,13 @@
 
 #define BCMA_RESET_CTL_RESET 0x0001
 
+/* The STM32F4 SDIO data path used by AP6181 does not reliably continue a
+ * function 1 CMD53 transfer after the first 64-byte block.  Keep firmware
+ * and NVRAM downloads to one SDIO block per command for this chip.
+ */
+
+#define BCMF_43362_UPLOAD_TRANSFER_SIZE 64
+
 /* SOCSRAM core registers */
 
 #define SOCSRAM_BANKX_INDEX  ((uint32_t) (0x18004000 + 0x10) )
@@ -142,7 +149,13 @@ int bcmf_core_set_backplane_window(FAR bcmf_interface_dev_t *ibus,
 int bcmf_upload_binary(FAR bcmf_interface_dev_t *ibus, uint32_t address,
                        uint8_t *buf, unsigned int len)
 {
+  unsigned int transfer_size = BCMF_UPLOAD_TRANSFER_SIZE;
   unsigned int size;
+
+  if (ibus->cur_chip_id == SDIO_DEVICE_ID_BROADCOM_43362)
+    {
+      transfer_size = BCMF_43362_UPLOAD_TRANSFER_SIZE;
+    }
 
 #ifdef DBG_VALIDATE_UPLOAD
   uint32_t      validate_address = address;
@@ -161,9 +174,9 @@ int bcmf_upload_binary(FAR bcmf_interface_dev_t *ibus, uint32_t address,
           return ret;
         }
 
-      if (len > BCMF_UPLOAD_TRANSFER_SIZE)
+      if (len > transfer_size)
         {
-          size = BCMF_UPLOAD_TRANSFER_SIZE;
+          size = transfer_size;
         }
       else
         {
@@ -199,9 +212,9 @@ int bcmf_upload_binary(FAR bcmf_interface_dev_t *ibus, uint32_t address,
           return ret;
         }
 
-      if (validate_len > BCMF_UPLOAD_TRANSFER_SIZE)
+      if (validate_len > transfer_size)
         {
-          size = BCMF_UPLOAD_TRANSFER_SIZE;
+          size = transfer_size;
         }
       else
         {
