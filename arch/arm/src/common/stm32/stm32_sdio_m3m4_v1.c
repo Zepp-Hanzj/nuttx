@@ -1706,7 +1706,13 @@ static sdio_capset_t stm32_capabilities(struct sdio_dev_s *dev)
   caps |= SDIO_CAPS_1BIT_ONLY;
 #endif
 #ifdef CONFIG_STM32_SDIO_DMA
-  caps |= SDIO_CAPS_DMASUPPORTED;
+  /* STM32F4 uses the SDIO peripheral as the DMA flow controller.  The data
+   * path and DMA stream can therefore be armed before a CMD53 write; no DMA
+   * request is generated until the card accepts the command.  AP6181 needs
+   * the host data path ready when it returns the CMD53 response.
+   */
+
+  caps |= SDIO_CAPS_DMASUPPORTED | SDIO_CAPS_DMABEFOREWRITE;
 #endif
 
   return caps;
